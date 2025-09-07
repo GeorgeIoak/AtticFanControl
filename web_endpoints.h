@@ -19,6 +19,9 @@ extern ManualTimerState manualTimer;
 // Path for the diagnostics log file, consistent with documentation
 #define DIAGNOSTICS_LOG_PATH "/diagnostics.log"
 
+// Forward declarations
+void reinitMqtt();
+
 // Endpoint to download the CSV history log
 inline void handleHistoryDownload(ESP8266WebServer &server) {
   if (LittleFS.exists(HISTORY_LOG_PATH)) {
@@ -173,6 +176,13 @@ inline void handleRestart(ESP8266WebServer &server) {
   ESP.restart();
 }
 
+inline void handleResetConfig(ESP8266WebServer &server) {
+  setResetFlag();
+  server.send(200, "text/plain", "Configuration reset. Restarting...");
+  delay(100);
+  ESP.restart();
+}
+
 inline void handleGetConfig(ESP8266WebServer &server) {
   StaticJsonDocument<512> doc;
   doc["fanOnTemp"] = config.fanOnTemp;
@@ -196,6 +206,7 @@ inline void handleSetConfig(ESP8266WebServer &server) {
     return;
   }
 
+  bool mqttWasEnabled = config.mqttEnabled;
   bool testModeWasEnabled = config.testModeEnabled;
   StaticJsonDocument<512> doc; // Increased size for new field
   DeserializationError error = deserializeJson(doc, server.arg("plain"));
@@ -243,8 +254,14 @@ inline void handleSetConfig(ESP8266WebServer &server) {
     config.historyLogIntervalMs = doc["historyLogIntervalMs"];
   }
 
+  bool mqttIsNowEnabled = config.mqttEnabled;
   bool testModeIsNowEnabled = config.testModeEnabled;
   saveConfig(); // Persist the new settings
+
+  if (mqttWasEnabled != mqttIsNowEnabled) {
+    reinitMqtt();
+  }
+
   if (testModeWasEnabled != testModeIsNowEnabled) {
     server.send(200, "text/plain", "Configuration saved. A restart is required to apply Test Mode changes.");
   } else {

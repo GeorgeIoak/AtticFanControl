@@ -218,16 +218,30 @@ void initMqtt() {
 }
 
 /**
+ * @brief Re-initializes the MQTT client.
+ */
+void reinitMqtt() {
+    #if DEBUG_SERIAL
+    Serial.println("[MQTT] Re-initializing MQTT client...");
+    #endif
+    if (mqttClient.connected()) {
+        mqttClient.disconnect();
+    }
+    initMqtt();
+    reconnectMqtt(); // Attempt to connect immediately after re-initialization
+}
+
+/**
  * @brief Main MQTT handler to be called in the main loop.
  */
 void handleMqtt() {
-    if (!config.mqttEnabled || WiFi.status() != WL_CONNECTED) {
+    if (WiFi.status() != WL_CONNECTED) {
         return;
     }
 
     static unsigned long lastMqttReconnectAttempt = 0;
     static unsigned long lastStatePublish = 0;
-
+    if (!config.mqttEnabled) return;
     if (!mqttClient.connected()) {
         if (millis() - lastMqttReconnectAttempt > 5000) {
             lastMqttReconnectAttempt = millis();

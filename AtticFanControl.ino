@@ -137,6 +137,7 @@ void setup() {
   server.on("/weather", HTTP_GET, [&]() { handleWeather(server); });
   server.on("/history.csv", HTTP_GET, [](){ handleHistoryDownload(server); });
   server.on("/restart", [](){ handleRestart(server); });
+  server.on("/reset_config", [](){ handleResetConfig(server); });
   server.on("/diagnostics", [](){ handleDiagnosticsDownload(server); });
   server.on("/update_wrapper", HTTP_GET, [](){ handleUpdateWrapper(server); });
   ElegantOTA.begin(&server, ota_user, ota_password); // Pass username and password

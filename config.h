@@ -5,6 +5,7 @@
 
 // A "magic number" to verify if EEPROM data is valid
 #define EEPROM_MAGIC 0x46414E43 // "FANC" in hex
+#define RTC_RESET_MAGIC 0xDEADBEEF
 
 // Define a structure to hold all configurable settings
 struct Config {
@@ -26,6 +27,23 @@ struct Config {
 // Global instance of our configuration
 Config config;
 
+// RTC Memory functions to handle reset flag
+void setResetFlag() {
+  uint32_t magic = RTC_RESET_MAGIC;
+  ESP.rtcUserMemoryWrite(0, &magic, sizeof(magic));
+}
+
+bool isResetFlagged() {
+  uint32_t magic;
+  ESP.rtcUserMemoryRead(0, &magic, sizeof(magic));
+  return magic == RTC_RESET_MAGIC;
+}
+
+void clearResetFlag() {
+  uint32_t magic = 0;
+  ESP.rtcUserMemoryWrite(0, &magic, sizeof(magic));
+}
+
 /**
  * @brief Saves the current configuration to EEPROM.
  */
@@ -39,11 +57,49 @@ inline void saveConfig() {
 }
 
 /**
+ * @brief Clears the configuration from EEPROM, forcing a load of default values on next boot.
+ */
+inline void clearConfig() {
+  setResetFlag();
+  config.magic = 0; // Invalidate the magic number
+  EEPROM.put(0, config);
+  EEPROM.commit();
+  delay(500);
+#if DEBUG_SERIAL
+  Serial.println("[INFO] Configuration cleared from EEPROM.");
+#endif
+}
+
+/**
  * @brief Loads configuration from EEPROM. If EEPROM is invalid or empty,
  * it loads default values and saves them.
  */
 inline void loadConfig() {
   EEPROM.begin(sizeof(Config)); // Allocate space
+  
+  if (isResetFlagged()) {
+    clearResetFlag();
+#if DEBUG_SERIAL
+    Serial.println("[INFO] Reset flag detected. Loading default configuration.");
+#endif
+    // Load default values from hardware.h
+    config.fanOnTemp = FAN_ON_TEMP_DEFAULT;
+    config.fanDeltaTemp = FAN_DELTA_TEMP_DEFAULT;
+    config.fanHysteresis = FAN_HYSTERESIS_DEFAULT;
+    config.preCoolTriggerTemp = PRECOOL_TRIGGER_TEMP_DEFAULT;
+    config.preCoolTempOffset = PRECOOL_TEMP_OFFSET_DEFAULT;
+    config.preCoolingEnabled = PRECOOLING_ENABLED_DEFAULT;
+    config.onboardLedEnabled = ONBOARD_LED_ENABLED_DEFAULT;
+    config.testModeEnabled = TEST_MODE_ENABLED_DEFAULT;
+    config.dailyRestartEnabled = DAILY_RESTART_ENABLED_DEFAULT;
+    config.mqttEnabled = MQTT_ENABLED_DEFAULT;
+    config.mqttDiscoveryEnabled = MQTT_DISCOVERY_ENABLED_DEFAULT;
+    config.historyLogIntervalMs = HISTORY_LOG_INTERVAL_DEFAULT;
+    // Save the default configuration for next time
+    saveConfig();
+    return;
+  }
+
   EEPROM.get(0, config);
 
   // Check if the magic number matches. If not, data is invalid.
