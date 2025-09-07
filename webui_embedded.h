@@ -1,0 +1,743 @@
+#pragma once
+
+#if !USE_FS_WEBUI
+
+const char EMBEDDED_WEBUI[] PROGMEM = R"rawliteral(
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Attic Fan Web Server</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+  body { font-family: Arial, sans-serif; text-align: center; margin-top: 10px; }
+  h1, h2 { margin-top: 15px; margin-bottom: 10px; }
+  .control-group { margin-bottom: 20px; padding: 10px; }
+  .switch { position: relative; display: inline-block; width: 60px; height: 34px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+  .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+  input:checked + .slider { background-color: #2196F3; }
+  input:checked + .slider:before { transform: translateX(26px); }
+    .content-section {
+      margin-top: 20px;
+      border-top: 1px solid #ccc;
+      padding-top: 10px;
+    }
+    #configForm input {
+      width: 60px;
+      margin: 5px;
+    }
+    #configForm button {
+      margin: 5px;
+      padding: 8px 12px;
+    }
+    .btn {
+      padding: 8px 16px;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1em;
+    } 
+    .btn-danger {
+      color: #fff;
+      background-color: #dc3545;
+      border-color: #dc3545;
+    }
+    .sensor-grid {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 15px;
+    }
+    .sensor-item {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      min-width: 120px;
+    }
+  .config-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 15px; align-items: stretch; } 
+    .config-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+      min-width: 80px;
+    }
+    .number-input-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .number-input-wrapper input { text-align: center; font-size: 1.2em; height: 44px; width: 100%; border: 1px solid #ccc; border-radius: 4px; -moz-appearance: textfield; }  
+    .page-container {
+      max-width: 1000px; /* Constrain width on large screens */
+      margin: 0 auto;   /* Center the container */
+      padding: 0 10px;  /* Add side padding for smaller screens */
+      box-sizing: border-box;
+    }
+    .segmented-control {
+      display: flex;
+      border: 1px solid #007bff;
+      border-radius: 5px;
+      overflow: hidden;
+      margin-bottom: 15px;
+    }
+    .segmented-control button.btn {
+      flex: 1;
+      padding: 8px 16px;
+      border: none;
+      background-color: #f8f9fa; /* Default light grey background */
+      color: #007bff;
+      cursor: pointer;
+      border-radius: 0; /* Remove individual button radius */
+    }
+    .segmented-control button.btn.active {
+      background-color: #007bff;
+      color: white;
+    }
+    .segmented-control button.btn:not(:last-child) {
+      border-right: 1px solid #007bff; /* Add separator */
+    }
+    #mode-control-box {
+      border: 1px solid #ddd; border-radius: 8px; padding: 15px; max-width: 400px; margin: 0 auto;
+    }
+  .weather-forecast { display: flex; justify-content: center; gap: 20px; margin-top: 10px; }
+    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); }
+    .modal-content { background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 400px; border-radius: 8px; }
+    .modal-content .config-item { min-width: 150px; }
+    .close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+    #timerStatus { font-size: 0.9em; color: #007bff; font-weight: bold; margin-top: 5px; display: none; }
+    #manualOnBtn, #manualOffBtn, #setTimerBtn { margin: 2px; }
+  .help-link { font-size: 0.8em; vertical-align: super; text-decoration: none; color: #007bff; }
+  .settings-container { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; margin-bottom: 15px; }  
+  .settings-group { border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px 10px; flex: 1; min-width: 280px; }
+    .config-subheading { margin-top: 0; margin-bottom: 10px; text-align: left; color: #555; }
+    .unit-note { font-size: 0.9em; color: #6c757d; margin-top: -5px; margin-bottom: 10px; }
+    /* Responsive Chart Height */
+    #historyChart {
+      height: 200px !important; /* Default portrait height */
+    }
+    @media (orientation: landscape) {
+      #historyChart {
+        height: 250px !important; /* Taller for landscape mode */
+      }
+    }
+    /* Container to center the history chart */
+    .chart-container {
+      display: block;
+      max-width: 800px; /* Or another width that you prefer */
+      margin: 0 auto;   /* This centers the container */
+    }
+  </style> 
+</head>
+<body>
+<div class="page-container">
+  <h1>Attic Fan Control</h1>
+  <div id="sensorData" class="sensor-grid">
+    <div class="sensor-item">
+      <strong>Attic</strong>
+      <div><span id="atticTemp">--</span>°F / <span id="atticHumidity">--</span>%</div>
+    </div>
+    <div class="sensor-item">
+      <strong>Outdoor</strong>
+      <div><span id="outdoorTemp">--</span>°F</div>
+    </div>
+  </div>
+
+  <div class="content-section">
+    <h2>History</h2>
+    <div class="chart-container">
+      <canvas id="historyChart"></canvas>
+      <div id="historyChartMsg" style="color: #888; font-size: 0.95em; margin-top: 8px;"></div>
+    </div>
+  </div>
+
+    <div class="content-section">
+      <h2>Weather Forecast</h2>
+      <p>Current: <span id="currentWeatherIcon"></span> <span id="currentWeatherTemp">--</span>°F / <span id="currentWeatherHumidity">--</span>%</p>
+      <div class="weather-forecast" id="forecastContainer"></div>
+    </div>
+    <div class="content-section">
+    <div class="control-group" id="mode-control-box">
+      <h3>Mode Control <a href="/help#mode-control" class="help-link" title="Click for detailed help on modes" aria-label="Help on mode control">(?)</a></h3>
+      <div class="segmented-control">
+        <button id="autoModeBtn" class="btn" onclick="setMode('AUTO')">AUTO</button>
+        <button id="manualModeBtn" class="btn" onclick="setMode('MANUAL')">MANUAL</button>
+      </div>
+      <div id="fan-icon-container">
+        <svg id="fan-icon" class="fan-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width: 60px; height: 60px; fill: #888; margin: 5px auto;">
+          <path d="M50,15 A35,35 0 0,1 85,50 L50,50 Z" />
+          <path d="M50,15 A35,35 0 0,0 15,50 L50,50 Z" transform="rotate(120 50 50)" />
+          <path d="M50,15 A35,35 0 0,0 15,50 L50,50 Z" transform="rotate(240 50 50)" />
+          <circle cx="50" cy="50" r="8" fill="#666"/>
+        </svg> 
+      </div>
+      <p>Fan is <span id="fanState">OFF</span></p>
+      <p id="timerStatus"></p>
+      <div>
+        <button id="manualOnBtn" class="btn" onclick="setFan('on')" disabled>Turn ON</button>
+        <button id="manualOffBtn" class="btn" onclick="setFan('off')" disabled>Turn OFF</button>
+        <button id="setTimerBtn" class="btn" onclick="openTimerModal()" disabled>Set Timer</button>
+      </div>
+    </div>
+  </div>
+
+
+  <div id="configForm" class="content-section">
+    <h2>Fan Temp Control Settings <a href="/help#temp-settings" class="help-link" title="Click for detailed help on temperature settings" aria-label="Help on temperature settings">(?)</a></h2>
+    <p class="unit-note">(All temperatures in Fahrenheit °F)</p>
+    <div class="settings-container">
+      <div class="settings-group">
+        <h4 class="config-subheading">Core Automation</h4>
+        <div class="config-grid">
+          <div class="config-item">
+            <label for="fanOnTemp" title="The attic temperature at which the fan will consider turning on.">On Temp</label>
+            <div class="number-input-wrapper"><input type="number" id="fanOnTemp" step="0.1" value="90.0"></div>
+          </div>
+          <div class="config-item">
+            <label for="fanDeltaTemp" title="Fan only runs if attic is this much hotter than outside. Prevents pulling in hot air.">Delta Temp</label>
+            <div class="number-input-wrapper"><input type="number" id="fanDeltaTemp" step="0.1" value="5.0"></div>
+          </div>
+          <div class="config-item">
+            <label for="fanHysteresis" title="Prevents rapid on/off cycling. Fan turns off at (On Temp - Hysteresis).">Hysteresis</label>
+            <div class="number-input-wrapper"><input type="number" id="fanHysteresis" step="0.1" value="2.0"></div>
+          </div>
+        </div>
+      </div>
+      <div class="settings-group">
+        <h4 class="config-subheading">Smart Pre-Cooling</h4>
+        <div class="config-grid">
+          <div class="config-item"> 
+            <label for="preCoolTriggerTemp" title="If forecast high is at or above this, pre-cooling activates.">Pre-Cool Trigger</label>
+            <div class="number-input-wrapper"><input type="number" id="preCoolTriggerTemp" step="1" value="90.0"></div>
+          </div>
+          <div class="config-item">
+            <label for="preCoolTempOffset" title="Lowers the 'On Temp' by this amount when pre-cooling is active.">Pre-Cool Offset</label>
+            <div class="number-input-wrapper"><input type="number" id="preCoolTempOffset" step="1" value="5.0"></div>
+          </div>
+          <div class="config-item">
+            <label for="historyLogInterval" title="How often to log sensor history (in minutes).">History Log Interval</label>
+            <div class="number-input-wrapper"><input type="number" id="historyLogInterval" min="1" max="1440" step="1" required value="5"></div>
+            <small class="form-text">Default: 5 min. Range: 1–1440 (24h).</small>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button id="saveConfigBtn" onclick="saveConfig()" class="btn" style="margin-top: 15px;">Save</button>
+  </div>
+
+  <div class="content-section">
+    <h2>Feature Toggles <a href="/help#feature-toggles" class="help-link" title="Click for detailed help on these features" aria-label="Help on feature toggles">(?)</a></h2>
+    <div class="config-grid">
+      <div class="config-item">
+        <label for="preCoolingEnabled" title="Enable or disable the forecast-based pre-cooling logic.">Enable Pre-Cooling</label>
+        <label class="switch">
+          <input type="checkbox" id="preCoolingEnabled">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="config-item">
+        <label for="onboardLedEnabled" title="Enable or disable the blinking status light on the device.">Enable Status LED</label>
+        <label class="switch">
+          <input type="checkbox" id="onboardLedEnabled">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="config-item">
+        <label for="dailyRestartEnabled" title="Automatically restart the device once every 24 hours to improve long-term stability.">Enable Daily Restart</label>
+        <label class="switch">
+          <input type="checkbox" id="dailyRestartEnabled">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="config-item">
+        <label for="mqttEnabled" title="Enable or disable MQTT integration for Home Assistant.">Enable MQTT Broker</label>
+        <label class="switch">
+          <input type="checkbox" id="mqttEnabled">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="config-item">
+        <label for="mqttDiscoveryEnabled" title="Publish configuration topics for Home Assistant auto-discovery.">Publish HA Discovery</label>
+        <label class="switch">
+          <input type="checkbox" id="mqttDiscoveryEnabled">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="config-item">
+        <label for="testModeEnabled" title="Enable the Test Panel with sliders to simulate sensor values.">Enable Test Mode</label>
+        <label class="switch">
+          <input type="checkbox" id="testModeEnabled">
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div id="timerModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeTimerModal()">&times;</span>
+      <h3>Set Manual Timer</h3>
+      <div class="config-grid">
+        <div class="config-item">
+          <label for="timerDelay">Delay Start (mins)</label>
+          <div class="number-input-wrapper">
+            <input type="number" id="timerDelay" min="0" step="1" value="0">
+          </div>
+        </div>
+        <div class="config-item">
+          <label for="timerDuration">Run Duration (mins)</label>
+          <div class="number-input-wrapper">
+            <input type="number" id="timerDuration" min="1" step="1" value="30">
+          </div>
+        </div>
+      </div>
+      <div style="margin-top: 15px;">
+        <label for="postTimerAction">After timer ends:</label>
+        <select id="postTimerAction" style="padding: 5px; font-size: 1em;"><option value="revert_to_auto">Revert to AUTO</option><option value="stay_manual">Stay MANUAL (Fan Off)</option></select>
+      </div>
+      <div style="margin-top: 20px;"><button class="btn" onclick="startTimedRun()">Start Timed Run</button></div>
+    </div>
+  </div>
+
+  <div id="test-panel" class="content-section" style="display: none; background-color: #fffbe6; border: 1px solid #ffe58f;">
+    <h2>🧪 Test Panel</h2>
+    <div>
+      <label for="simulatedAtticTemp">Simulated Attic Temp: <span id="attic-temp-val">--</span>°F</label><br>
+      <input type="range" id="simulatedAtticTemp" min="50" max="150" step="1" oninput="updateTempDisplay('attic-temp-val', this.value); setSliderInteraction(true)" style="width: 200px;">
+    </div>
+    <div>
+      <label for="simulatedOutdoorTemp">Simulated Outdoor Temp: <span id="outdoor-temp-val">--</span>°F</label><br>
+      <input type="range" id="simulatedOutdoorTemp" min="30" max="120" step="1" oninput="updateTempDisplay('outdoor-temp-val', this.value); setSliderInteraction(true)" style="width: 200px;">
+    </div>
+    <button onclick="updateTestTemps()" class="btn">Update Temps</button>
+    <hr style="margin: 20px 0;">
+    <p>Put device into AP Mode to change WiFi credentials:</p>
+    <button onclick="forceAPMode()" class="btn">Force AP Mode</button>
+  </div>
+
+  <div class="content-section">
+    <h2>System & Maintenance</h2>
+    <div class="system-controls" style="display: flex; justify-content: center; align-items: center; gap: 20px;">
+      <a href="/update_wrapper">Firmware Update</a>
+      <a href="/history.csv" class="btn" download>Download History (CSV)</a>
+      <button onclick="restartDevice()" class="btn btn-danger">Restart Device</button>
+    </div>
+  </div>  
+  <div style="margin-top: 20px; font-size: 0.8em; color: #888;">
+    Firmware Version: <span id="firmwareVersion">--</span>
+  </div>
+</div><div id="saveToast" class="toast" style="visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 4px; padding: 16px; position: fixed; z-index: 1; left: 50%; transform: translateX(-50%); bottom: 30px;"></div>  
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    let testMode = false;
+    let historyChart;
+    let currentFanState = false;
+    let isInteractingWithSlider = false;
+    const fanIconEl = document.getElementById("fan-icon");
+    const fanKeyframes = `
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }`;
+    const styleSheet = document.createElement("style");
+    styleSheet.innerText = fanKeyframes;
+    document.head.appendChild(styleSheet);
+
+    function fetchAndRenderHistory() {
+      fetch('/history.csv')
+        .then(res => {
+          if (!res.ok) throw new Error('No history log found.');
+          return res.text();
+        })
+        .then(csv => {
+          const lines = csv.trim().split(/\r?\n/);
+          if (lines.length < 2) {
+            document.getElementById('historyChartMsg').textContent = 'No historical data logged yet.';
+            if (historyChart) historyChart.destroy();
+            return;
+          }
+          const header = lines[0].split(',');
+          const timeIdx = header.indexOf('timestamp');
+          const atticIdx = header.indexOf('attic_temp'); 
+          if (timeIdx < 0 || atticIdx < 0) {
+            document.getElementById('historyChartMsg').textContent = 'CSV format error: missing columns.';
+            return; 
+          }
+          const outdoorIdx = header.indexOf('outdoor_temp'); // Corrected
+          const humidityIdx = header.indexOf('humidity');   // Corrected
+          const fanOnIdx = header.indexOf('fan_on');
+
+          const labels = [];
+          const attic = [];
+          const outdoor = [];
+          const humidity = [];
+          const fanOn = [];
+          for (let i = 1; i < lines.length; ++i) {
+            const row = lines[i].split(',');
+            const ts = row[timeIdx];
+            if (ts) { 
+              // Format to "MM-DD HH:mm" to save space on the chart's X-axis
+              labels.push(ts.substring(5, 16).replace('T', ' '));
+            } else {
+              labels.push(''); // Handle missing timestamp
+            }
+            attic.push(parseFloat(row[atticIdx]));
+            if (outdoorIdx >= 0) outdoor.push(parseFloat(row[outdoorIdx]));
+            if (humidityIdx >= 0) humidity.push(parseFloat(row[humidityIdx]));
+            if (fanOnIdx >= 0) fanOn.push(parseInt(row[fanOnIdx], 10));
+          }
+          const N = 100;
+          const start = labels.length > N ? labels.length - N : 0;
+          const chartLabels = labels.slice(start);
+          const chartAttic = attic.slice(start);
+          const chartOutdoor = outdoorIdx >= 0 ? outdoor.slice(start) : undefined;
+          const chartHumidity = humidityIdx >= 0 ? humidity.slice(start) : undefined;
+          const chartFanOn = fanOnIdx >= 0 ? fanOn.slice(start) : undefined;
+
+          const datasets = [
+            { label: 'Attic Temp (°F)', data: chartAttic, borderColor: '#e67e22', backgroundColor: 'rgba(230,126,34,0.1)', yAxisID: 'y', tension: 0.2 },
+            { label: 'Outdoor Temp (°F)', data: chartOutdoor, borderColor: '#2980b9', backgroundColor: 'rgba(41,128,185,0.1)', yAxisID: 'y', tension: 0.2, hidden: chartOutdoor === undefined },
+            { label: 'Attic Humidity (%)', data: chartHumidity, borderColor: '#27ae60', backgroundColor: 'rgba(39,174,96,0.1)', yAxisID: 'y2', tension: 0.2, hidden: chartHumidity === undefined },
+            { label: 'Fan On', data: chartFanOn, borderColor: '#9b59b6', backgroundColor: 'rgba(155,89,182,0.2)', yAxisID: 'y3', tension: 0.2, stepped: true, fill: true, hidden: chartFanOn === undefined }
+          ];
+
+          const ctx = document.getElementById('historyChart').getContext('2d');
+          if (historyChart) historyChart.destroy();
+          historyChart = new Chart(ctx, {
+            type: 'line',
+            data: { labels: chartLabels, datasets: datasets },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: { mode: 'index', intersect: false },
+              scales: {
+                y: { type: 'linear', display: true, position: 'left', title: { display: true, text: 'Temperature (°F)' } },
+                y2: { type: 'linear', display: chartHumidity !== undefined, position: 'right', title: { display: true, text: 'Humidity (%)' }, grid: { drawOnChartArea: false }, min: 0, max: 100 },
+                y3: { type: 'linear', display: false, min: -0.5, max: 1.5 }
+              }
+            }
+          });
+          document.getElementById('historyChartMsg').textContent = '';
+        })
+        .catch(err => {
+          document.getElementById('historyChartMsg').textContent = 'No historical data available.';
+          if (historyChart) historyChart.destroy(); 
+        });
+    }
+
+    function updateSensorData() {
+      fetch("/status")
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById("firmwareVersion").textContent = data.firmwareVersion;
+          document.getElementById("atticTemp").textContent = data.atticTemp;
+          document.getElementById("atticHumidity").textContent = data.atticHumidity;
+          document.getElementById("outdoorTemp").textContent = data.outdoorTemp;
+          const fanOn = data.fanOn;
+          currentFanState = fanOn;
+          updateFanVisual(fanOn); 
+
+          const timerStatusEl = document.getElementById('timerStatus');
+          if (data.timerActive) {
+            const minutes = Math.floor(data.timerRemainingSec / 60);
+            const seconds = data.timerRemainingSec % 60;
+            const remainingTime = `${minutes}m ${String(seconds).padStart(2, '0')}s`;
+            if (data.timerMode === 'delay') {
+              timerStatusEl.innerHTML = `Timer starts in: ${remainingTime}`;
+            } else {
+              timerStatusEl.innerHTML = `Timer runs for: ${remainingTime}`;
+            }
+            timerStatusEl.style.display = 'block';
+          } else {
+            timerStatusEl.style.display = 'none';
+          }
+
+          // Show test panel if enabled on the device
+          if (data.testModeEnabled) { 
+            document.getElementById('test-panel').style.display = 'block';
+            const atticSlider = document.getElementById('simulatedAtticTemp');
+            const outdoorSlider = document.getElementById('simulatedOutdoorTemp');
+            if (!isInteractingWithSlider) {
+              atticSlider.value = data.simulatedAtticTemp;
+              outdoorSlider.value = data.simulatedOutdoorTemp;
+            }
+            updateTempDisplay('attic-temp-val', atticSlider.value);
+            updateTempDisplay('outdoor-temp-val', outdoorSlider.value);
+          }
+
+          // Sync the UI mode with the device's actual mode
+          setMode(data.fanMode, false); // Update UI without sending a command back
+
+          // After setting the mode, refine the manual button states
+          if (data.fanMode === 'MANUAL') {
+            document.getElementById("manualOnBtn").disabled = fanOn; 
+            document.getElementById("manualOffBtn").disabled = !fanOn;
+          }
+        })
+        .catch(() => {
+          document.getElementById("firmwareVersion").textContent = "--";
+          document.getElementById("atticTemp").textContent = "--";
+          document.getElementById("atticHumidity").textContent = "--";
+          document.getElementById("outdoorTemp").textContent = "--";
+        });
+    }
+
+    function updateWeatherData() {
+      fetch("/weather")
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById("currentWeatherIcon").textContent = data.currentIcon;
+          document.getElementById("currentWeatherTemp").textContent = data.currentTemp;
+          document.getElementById("currentWeatherHumidity").textContent = data.currentHumidity;
+
+          const forecastContainer = document.getElementById("forecastContainer");
+          forecastContainer.innerHTML = ""; // Clear old forecast
+
+          data.forecast.forEach((day, index) => {
+            const dayDiv = document.createElement("div");
+            dayDiv.className = "forecast-day";
+            dayDiv.innerHTML = `
+              <div>${dayOfWeekToString(day.dayOfWeek, index === 0)}</div>
+              <div class="emoji">${day.icon}</div>
+              <div><strong>${day.max}°</strong> / ${day.min}°</div>
+            `;
+            forecastContainer.appendChild(dayDiv);
+          });
+        }).catch(err => console.error("Failed to fetch weather:", err)); 
+    }
+    function dayOfWeekToString(dayIndex, isToday) {
+      if (isToday) return "Today";
+      const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      if (dayIndex >= 0 && dayIndex < 7) {
+        return days[dayIndex];
+      }
+      return "Day " + (dayIndex + 1); // Fallback
+    }
+
+    function setMode(newMode, sendCommand = true) {
+      const isManual = newMode === 'MANUAL';
+      document.getElementById('autoModeBtn').classList.toggle('active', !isManual);
+      document.getElementById('manualModeBtn').classList.toggle('active', isManual);
+
+      document.getElementById("manualOnBtn").disabled = !isManual;
+      document.getElementById("manualOffBtn").disabled = !isManual;
+      document.getElementById("setTimerBtn").disabled = !isManual;
+
+      if (sendCommand) {
+        if (newMode === 'AUTO') {
+          fetch("/fan?state=auto").then(res => { if(res.ok) updateSensorData(); }).catch(err => console.error("Failed to set auto mode:", err));
+        } else if (newMode === 'MANUAL') { 
+          // Preserve the current fan state when switching to manual.
+          const stateToSet = currentFanState ? 'on' : 'off';
+          fetch("/fan?state=" + stateToSet).then(res => { if(res.ok) updateSensorData(); }).catch(err => console.error("Failed to set manual mode:", err));
+        }
+      }
+    }
+
+    function setFan(state) {
+      // Send the command and then immediately trigger a status update for a responsive UI.
+      fetch("/fan?state=" + state).then(res => { if (res.ok) updateSensorData(); }).catch(err => { console.error("Fan toggle failed:", err); }); 
+    }
+
+    function loadConfig() {
+      // When live, fetch the current config from the device
+      fetch("/config")
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById("fanOnTemp").value = data.fanOnTemp;
+          document.getElementById("fanDeltaTemp").value = data.fanDeltaTemp;
+          document.getElementById("fanHysteresis").value = data.fanHysteresis;
+          document.getElementById("preCoolTriggerTemp").value = data.preCoolTriggerTemp;
+          document.getElementById("preCoolTempOffset").value = data.preCoolTempOffset;
+          document.getElementById("preCoolingEnabled").checked = data.preCoolingEnabled;
+          document.getElementById("onboardLedEnabled").checked = data.onboardLedEnabled;
+          document.getElementById("testModeEnabled").checked = data.testModeEnabled;
+          document.getElementById("dailyRestartEnabled").checked = data.dailyRestartEnabled;
+          document.getElementById("mqttEnabled").checked = data.mqttEnabled;
+          document.getElementById("mqttDiscoveryEnabled").checked = data.mqttDiscoveryEnabled;
+          if (data.historyLogIntervalMs) {
+            document.getElementById("historyLogInterval").value = Math.round(data.historyLogIntervalMs / 60000);
+          } 
+        }).catch(err => console.error("Failed to load config:", err));
+    }
+
+    function saveConfig() {
+      const fanOnTemp = document.getElementById("fanOnTemp").value;
+      const fanDeltaTemp = document.getElementById("fanDeltaTemp").value;
+      const fanHysteresis = document.getElementById("fanHysteresis").value;
+      const preCoolTriggerTemp = document.getElementById("preCoolTriggerTemp").value;
+      const preCoolTempOffset = document.getElementById("preCoolTempOffset").value;
+      const preCoolingEnabled = document.getElementById("preCoolingEnabled").checked;
+      const onboardLedEnabled = document.getElementById("onboardLedEnabled").checked;
+      const testModeEnabled = document.getElementById("testModeEnabled").checked;
+      const dailyRestartEnabled = document.getElementById("dailyRestartEnabled").checked;
+      const mqttEnabled = document.getElementById("mqttEnabled").checked;
+      const mqttDiscoveryEnabled = document.getElementById("mqttDiscoveryEnabled").checked;
+      const logIntervalMin = parseInt(document.getElementById("historyLogInterval").value, 10);
+      
+      const configPayload = {
+        fanOnTemp: parseFloat(fanOnTemp),
+        fanDeltaTemp: parseFloat(fanDeltaTemp),
+        fanHysteresis: parseFloat(fanHysteresis),
+        preCoolTriggerTemp: parseFloat(preCoolTriggerTemp),
+        preCoolTempOffset: parseFloat(preCoolTempOffset),
+        preCoolingEnabled: preCoolingEnabled,
+        onboardLedEnabled: onboardLedEnabled,
+        dailyRestartEnabled: dailyRestartEnabled,
+        testModeEnabled: testModeEnabled,
+        mqttEnabled: mqttEnabled,
+        mqttDiscoveryEnabled: mqttDiscoveryEnabled
+      };
+
+      if (!isNaN(logIntervalMin) && logIntervalMin > 0) {
+        configPayload.historyLogIntervalMs = logIntervalMin * 60000;
+      }
+
+      fetch("/config", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(configPayload)
+      })
+      .then(res => Promise.all([res.ok, res.text()]))
+      .then(([ok, text]) => {
+        if (ok) {
+          showToast("Configuration saved!");
+          // Only prompt for restart if the server message indicates it's necessary
+          if (text.includes("restart") && confirm(text + " Restart now?")) { restartDevice(); } 
+        } else {
+          showToast("Save failed!");
+        }
+      })
+      .catch(err => {
+        console.error("Failed to save config:", err);
+        showToast("Save failed!");
+      }); 
+    }
+
+    function restartDevice() {
+      if (confirm("Are you sure you want to restart the device?")) {
+        fetch("/restart")
+          .then(() => {
+            alert("Device is restarting. The page will become unresponsive.");
+          })
+          .catch(err => console.error("Failed to send restart command:", err));
+      }
+    }
+
+    function setSliderInteraction(isInteracting) {
+      // When the user interacts with a slider, set a flag.
+      // This prevents the periodic status update from overwriting the slider's position.
+      // The flag is reset only when "Update Temps" is clicked successfully.
+      isInteractingWithSlider = isInteracting;
+    }
+
+    function openTimerModal() {
+      document.getElementById('timerModal').style.display = 'block';
+    }
+
+    function closeTimerModal() {
+      document.getElementById('timerModal').style.display = 'none';
+    }
+
+    function startTimedRun() {
+      const delay = document.getElementById('timerDelay').value;
+      const duration = document.getElementById('timerDuration').value;
+      const postAction = document.getElementById('postTimerAction').value;
+
+      fetch('/fan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'start_timed', delay: parseInt(delay, 10), duration: parseInt(duration, 10), postAction: postAction })
+      })
+      .then(res => {
+        if (res.ok) { showToast("Timed run started!"); closeTimerModal(); }
+        else { showToast("Failed to start timer."); } 
+      })
+      .catch(err => console.error("Failed to start timed run:", err));
+    }
+
+    function toggleInfo(element) {
+      const targetId = element.getAttribute('data-target');
+      const targetElement = document.getElementById(targetId);
+      if (targetElement) {
+        targetElement.style.display = targetElement.style.display === 'block' ? 'none' : 'block';
+      }
+    }
+
+    function updateTempDisplay(elementId, value) {
+      document.getElementById(elementId).textContent = value;
+    }
+
+    function updateTestTemps() {
+      const attic = document.getElementById('simulatedAtticTemp').value;
+      const outdoor = document.getElementById('simulatedOutdoorTemp').value;
+      fetch(`/test/set_temps?attic=${attic}&outdoor=${outdoor}`)
+        .then(res => {
+          const success = res.ok;
+          showToast(success ? "Test temps updated." : "Update failed.");
+          if (success) {
+            // On success, reset the interaction flag so the UI will sync with the device again.
+            setSliderInteraction(false);
+          }
+        })
+        .catch(err => console.error("Failed to set test temps:", err));
+    }
+
+    function forceAPMode() {
+      if (confirm("This will force the device into AP mode and disconnect it from your WiFi. Are you sure?")) {
+        fetch('/test/force_ap')
+          .then(() => showToast("AP Mode command sent."))
+          .catch(err => console.error("Failed to force AP mode:", err));
+      }
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById("saveToast");
+      toast.textContent = message;
+      toast.style.visibility = "visible";
+      setTimeout(() => {
+        toast.style.visibility = "hidden";
+      }, 3000);
+    }
+
+    function updateFanVisual(isFanOn) {
+      const fanStateEl = document.getElementById("fanState");
+      fanStateEl.textContent = isFanOn ? "ON" : "OFF";
+      if (isFanOn) {
+        fanIconEl.style.animation = 'spin 1s linear infinite';
+      } else {
+        fanIconEl.style.animation = 'none';
+      }
+    }
+
+    function initializeApp() {
+      // Set initial UI state for controls
+      setMode('AUTO', false); // Set a default, will be corrected by first status update
+      loadConfig();
+      updateSensorData();
+      updateWeatherData();
+      fetchAndRenderHistory();
+      setInterval(fetchAndRenderHistory, 5 * 60 * 1000); // Refresh history every 5 min
+      setInterval(updateSensorData, 3000); // Refresh status every 3 seconds for a responsive UI
+      setInterval(updateWeatherData, 600000); // Update weather every 10 minutes
+    }
+
+    // The embedded UI is always live, so initialize directly.
+    initializeApp(); 
+  </script>
+  <script>
+    // Close modal if user clicks outside of it
+    window.onclick = function(event) {
+      const modal = document.getElementById('timerModal');
+      if (event.target == modal) {
+        modal.style.display = "none";
+      }
+    }
+  </script>
+</body>
+</html>
+)rawliteral";
+
+#endif // !USE_FS_WEBUI
