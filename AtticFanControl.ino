@@ -101,37 +101,36 @@ void setup() {
   setFanState(false); // Default OFF
 
   // Mount the filesystem
-
   if (!LittleFS.begin()) {
     Serial.println("Failed to mount LittleFS. Formatting...");
     logDiagnostics("[ERROR] Failed to mount LittleFS. Formatting...");
     LittleFS.format();
   }
 
-  // Schedule the first history log to occur sooner than the full interval.
-  // This ensures the history file is created promptly after boot for the UI chart.
+  // Create history file promptly after boot for the UI chart
   lastHistoryLog = millis() - config.historyLogIntervalMs + 15000UL; // Log in ~15 seconds
 
   // --- Non-Blocking WiFi Setup ---
 #if USE_STATIC_IP
-  // Apply static IP configuration if enabled
   if (!WiFi.config(staticIP, gateway, subnet, primaryDNS, secondaryDNS)) {
     Serial.println("Failed to configure static IP!");
   }
 #endif
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
-  WiFi.setSleep(false);
+  WiFi.setSleep(false);                    
+  WiFi.hostname(MDNS_HOSTNAME);
   Serial.println("Initiated WiFi connection...");
 
-  // server.on("/", [](){ handleRoot(server); });
-  server.on("/", handleRootStreamed);
+  // -------------------------
+  // Route registration
+  // -------------------------
+  server.on("/", handleRootOneShot);
   server.on("/help", [](){ handleHelp(server); });
   server.on("/fan", HTTP_ANY, [&](){ handleFan(server, fanMode); });
   server.on("/status", [&](){ handleStatus(server, fanMode); });
   server.on("/config", HTTP_GET, [](){ handleGetConfig(server); });
   server.on("/config", HTTP_POST, [](){ handleSetConfig(server); });
-  // Conditionally register test endpoints based on runtime config
   if (config.testModeEnabled) {
     server.on("/test/set_temps", [](){ handleSetTestTemps(server); });
     server.on("/test/force_ap", [](){ handleForceAP(server); });
@@ -142,20 +141,19 @@ void setup() {
   server.on("/reset_config", [](){ handleResetConfig(server); });
   server.on("/diagnostics", [](){ handleDiagnosticsDownload(server); });
   server.on("/update_wrapper", HTTP_GET, [](){ handleUpdateWrapper(server); });
-  ElegantOTA.begin(&server, ota_user, ota_password); // Pass username and password
+  ElegantOTA.begin(&server, ota_user, ota_password);
 
   // --- Arduino IDE OTA Setup ---
-  // This is separate from ElegantOTA and handles uploads directly from the IDE.
   ArduinoOTA.setHostname(MDNS_HOSTNAME);
-  ArduinoOTA.setPassword(ota_password); // Uses the password from secrets.h
+  ArduinoOTA.setPassword(ota_password);
 
   ArduinoOTA.onStart([]() {
     String type;
     if (ArduinoOTA.getCommand() == U_FLASH) {
       type = "sketch";
-    } else { // U_FS
+    } else {
       type = "filesystem";
-      LittleFS.end(); // Unmount FS before updating
+      LittleFS.end();
     }
     Serial.println("Start updating " + type);
   });
@@ -170,9 +168,15 @@ void setup() {
   });
   ArduinoOTA.begin();
 
+  // -------------------------
+  // Start HTTP server
+  // -------------------------
   server.begin();
-  Serial.println("Web server started");
+  delay(10);
+  yield();
+  Serial.println("HTTP server started");
 }
+
 
 /**
  * @brief Manages the WiFi connection state, attempting to reconnect if disconnected.
@@ -195,6 +199,7 @@ void handleWiFiConnection() {
       
       if (MDNS.begin(MDNS_HOSTNAME)) {
         Serial.printf("mDNS responder started. Access at http://%s.local\n", MDNS_HOSTNAME);
+        MDNS.addService("http", "tcp", 80);
         // Explicitly advertise the Arduino OTA service. This is what the IDE looks for.
         MDNS.addService("arduino", "tcp", 8266);
         MDNS.addServiceTxt("arduino", "tcp", "board", "esp8266");
@@ -377,6 +382,9 @@ void handleDailyRestart() {
 }
 
 void loop() {
+  server.handleClient();   // must be first
+  MDNS.update();           // second
+
   // Handle IDE-based OTA updates.
   ArduinoOTA.handle();
 

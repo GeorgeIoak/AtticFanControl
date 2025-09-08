@@ -50,7 +50,7 @@
 #define AP_PASSWORD           "fancontrol" // Password for the fallback network (8+ characters)
 
 // === mDNS Configuration ===
-#define MDNS_HOSTNAME         "AtticFan" // Hostname for .local address
+#define MDNS_HOSTNAME         "atticfan" // Hostname for .local address
 
 // === Debugging ===
 #define DEBUG_SERIAL      true

@@ -302,30 +302,11 @@ inline void handleForceAP(ESP8266WebServer &server) {
     server.send(200, "text/plain", "AP Mode Forced. Connect to 'AtticFanSetup'.");
 }
 
-// Streams the embedded HTML in small chunks from PROGMEM
-static void handleRootStreamed() {
-  server.setContentLength(CONTENT_LENGTH_UNKNOWN);
-  server.send(200, "text/html", "");
-
-  const size_t CHUNK = 1024;
-  char buf[CHUNK];
-  PGM_P p = EMBEDDED_WEBUI;
-
-  while (true) {
-    size_t n = 0;
-    for (; n < CHUNK; ++n) {
-      char c = pgm_read_byte(p++);
-      if (c == 0) break;
-      buf[n] = c;
-    }
-    if (n) {
-      server.sendContent(buf, n);
-      yield();
-    }
-    if (n < CHUNK) break;
-  }
-
-  server.sendContent("");  // finish
+static void handleRootOneShot() {
+  server.sendHeader("Connection", "close");   // force socket close
+  server.send_P(200, "text/html",
+                EMBEDDED_WEBUI,
+                sizeof(EMBEDDED_WEBUI) - 1);  // compile-time length
 }
 
 
