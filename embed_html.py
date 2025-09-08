@@ -1,61 +1,83 @@
 #!/usr/bin/env python3
 import argparse
 from pathlib import Path
-import sys
 import gzip
 
 MAX_DELIM_LEN = 16
 
 def pick_delimiter(html: str) -> str:
-    # Try a set of short delimiters unlikely to appear
     candidates = ["EMB1","EMB2","EMB3","HTML","RAW1","RAW2","RAWX","Z","YY","QQ","AA","BB"]
     for c in candidates:
         if c not in html:
             return c
-    # Fallback: generate short numeric suffixes
     for i in range(1000, 9999):
         d = f"E{i}"
         if len(d) <= MAX_DELIM_LEN and d not in html:
             return d
     raise RuntimeError("Could not find a suitable raw-string delimiter not present in HTML.")
 
-TEMPLATE_PLAIN = """#pragma once
+HEADER_PREAMBLE = """#pragma once
+#include <pgmspace.h>
 
 // Auto-generated from {src_name}. Do not edit by hand.
-#ifndef USE_FS_WEBUI
-#define USE_FS_WEBUI 0
-#endif
-
-#if !USE_FS_WEBUI
-#include <pgmspace.h>
-const char {symbol}[] PROGMEM = R"{delim}(
-{html}
-){delim}";
+// To define the chunked handler automatically, keep WEBUI_EMIT_STREAM_HELPER=1
+#ifndef WEBUI_EMIT_STREAM_HELPER
+#define WEBUI_EMIT_STREAM_HELPER 1
 #endif
 """
 
-TEMPLATE_GZIP = """#pragma once
-
-// Auto-generated from {src_name} (gzipped). Do not edit by hand.
-#ifndef USE_FS_WEBUI
-#define USE_FS_WEBUI 0
+STREAM_HELPER = r"""
+#if WEBUI_EMIT_STREAM_HELPER
+// NOTE: Assumes you have a global 'ESP8266WebServer server(80);'
+// If your instance is named differently, set WEBUI_EMIT_STREAM_HELPER=0
+// and paste a custom handler in your route file.
+#include <ESP8266WebServer.h>
+#define WEBUI_DEFINE_CHUNKED_HANDLER(name)                                      \
+  static void name() {                                                           \
+    extern ESP8266WebServer server;                                              \
+    server.setContentLength(CONTENT_LENGTH_UNKNOWN);                             \
+    server.send(200, "text/html", "");                                           \
+    const size_t CHUNK = 1024;                                                   \
+    char buf[CHUNK];                                                             \
+    PGM_P p = EMBEDDED_WEBUI;                                                    \
+    while (true) {                                                               \
+      size_t n = 0;                                                              \
+      for (; n < CHUNK; ++n) {                                                   \
+        char c = pgm_read_byte(p++);                                             \
+        if (c == 0) break;                                                       \
+        buf[n] = c;                                                              \
+      }                                                                          \
+      if (n) {                                                                   \
+        server.sendContent(buf, n); /* send from RAM buffer */                   \
+        yield();                                                                 \
+      }                                                                          \
+      if (n < CHUNK) break;                                                      \
+    }                                                                            \
+    server.sendContent("");                                                      \
+  }
 #endif
+"""
 
-#if !USE_FS_WEBUI
-#include <pgmspace.h>
-const unsigned char {symbol}[] PROGMEM = {{
+TEMPLATE_PLAIN = """{preamble}
+{stream_helper}
+const char EMBEDDED_WEBUI[] PROGMEM = R"{delim}(
+{html}
+){delim}";
+"""
+
+TEMPLATE_GZIP = """{preamble}
+{stream_helper}
+const unsigned char EMBEDDED_WEBUI[] PROGMEM = {{
 {bytes}
 }};
-const size_t {symbol}_LEN = sizeof({symbol});
-// Remember to set 'Content-Encoding: gzip' when sending this.
-#endif
+const size_t EMBEDDED_WEBUI_LEN = sizeof(EMBEDDED_WEBUI);
 """
 
 def main():
     ap = argparse.ArgumentParser(description="Embed an HTML file into a C header for ESP8266/ESP32.")
     ap.add_argument("input", help="Path to index.html")
     ap.add_argument("output", help="Path to write header, e.g. webui_embedded.h")
-    ap.add_argument("--symbol", default="EMBEDDED_WEBUI", help="C symbol name (default: EMBEDDED_WEBUI)")
+    ap.add_argument("--no-stream-helper", action="store_true", help="Do not emit the WEBUI_DEFINE_CHUNKED_HANDLER macro")
     ap.add_argument("--gzip", action="store_true", help="Store gzipped payload instead of plain HTML")
     args = ap.parse_args()
 
@@ -63,12 +85,14 @@ def main():
     dst = Path(args.output)
     html = src.read_text(encoding="utf-8")
 
+    preamble = HEADER_PREAMBLE.format(src_name=src.name)
+    stream_helper = "" if args.no_stream_helper else STREAM_HELPER
+
     if args.gzip:
         gz = gzip.compress(html.encode("utf-8"))
-        # Pretty hexdump as C array
         lines = []
         line = []
-        for i,b in enumerate(gz):
+        for b in gz:
             line.append(f"0x{b:02x}")
             if len(line) == 16:
                 lines.append(", ".join(line))
@@ -76,21 +100,21 @@ def main():
         if line:
             lines.append(", ".join(line))
         content = TEMPLATE_GZIP.format(
-            src_name=src.name,
-            symbol=args.symbol,
+            preamble=preamble,
+            stream_helper=stream_helper,
             bytes=",\n".join(lines),
         )
     else:
         delim = pick_delimiter(html)
         content = TEMPLATE_PLAIN.format(
-            src_name=src.name,
-            symbol=args.symbol,
+            preamble=preamble,
+            stream_helper=stream_helper,
             delim=delim,
             html=html
         )
 
     dst.write_text(content, encoding="utf-8")
-    print(f"Wrote {dst} ({'gzipped' if args.gzip else 'plain'})")
+    print(f"Wrote {dst} ({'gzipped' if args.gzip else 'plain'}; stream helper {'ON' if not args.no_stream_helper else 'OFF'})")
 
 if __name__ == "__main__":
     main()

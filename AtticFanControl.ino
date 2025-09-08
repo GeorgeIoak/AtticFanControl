@@ -121,9 +121,11 @@ void setup() {
 #endif
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
+  WiFi.setSleep(false);
   Serial.println("Initiated WiFi connection...");
 
-  server.on("/", [](){ handleRoot(server); });
+  // server.on("/", [](){ handleRoot(server); });
+  server.on("/", handleRootStreamed);
   server.on("/help", [](){ handleHelp(server); });
   server.on("/fan", HTTP_ANY, [&](){ handleFan(server, fanMode); });
   server.on("/status", [&](){ handleStatus(server, fanMode); });
