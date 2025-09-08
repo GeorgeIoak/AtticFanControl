@@ -384,6 +384,11 @@ void handleDailyRestart() {
 void loop() {
   server.handleClient();   // must be first
   MDNS.update();           // second
+  static unsigned long lastMdnsAnnounce = 0;
+  if (millis() - lastMdnsAnnounce > 30000) {  // every 30s
+    MDNS.announce();                          // re-announce http + arduino services
+    lastMdnsAnnounce = millis();
+  }
 
   // Handle IDE-based OTA updates.
   ArduinoOTA.handle();
