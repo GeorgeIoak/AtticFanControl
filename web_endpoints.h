@@ -218,6 +218,21 @@ inline void handleSetConfig(ESP8266WebServer &server) {
     return;
   }
 
+  // Log the incoming changes to the diagnostics file
+  String logMessage = "[CONFIG] Web UI change: ";
+  bool first = true;
+  for (JsonPair kv : doc.as<JsonObject>()) {
+    if (!first) {
+      logMessage += ", ";
+    }
+    logMessage += kv.key().c_str();
+    logMessage += "=";
+    logMessage += kv.value().as<String>();
+    first = false;
+  }
+  logDiagnostics(logMessage.c_str());
+
+
   // Update config struct with new values if they exist in the JSON
   if (doc.containsKey("fanOnTemp")) {
     config.fanOnTemp = doc["fanOnTemp"];

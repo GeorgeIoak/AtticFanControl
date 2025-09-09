@@ -1,13 +1,43 @@
 #pragma once
+#include <pgmspace.h>
 
-// Auto-generated from /data/index.html to ensure embedded UI stays pixel-identical.
-// Regenerate this file whenever index.html changes.
-#ifndef USE_FS_WEBUI
-#define USE_FS_WEBUI 0
+// Auto-generated from index.html. Do not edit by hand.
+// To define the chunked handler automatically, keep WEBUI_EMIT_STREAM_HELPER=1
+#ifndef WEBUI_EMIT_STREAM_HELPER
+#define WEBUI_EMIT_STREAM_HELPER 1
 #endif
 
-#if !USE_FS_WEBUI
-#include <pgmspace.h>
+
+#if WEBUI_EMIT_STREAM_HELPER
+// NOTE: Assumes you have a global 'ESP8266WebServer server(80);'
+// If your instance is named differently, set WEBUI_EMIT_STREAM_HELPER=0
+// and paste a custom handler in your route file.
+#include <ESP8266WebServer.h>
+#define WEBUI_DEFINE_CHUNKED_HANDLER(name)                                      \
+  static void name() {                                                           \
+    extern ESP8266WebServer server;                                              \
+    server.setContentLength(CONTENT_LENGTH_UNKNOWN);                             \
+    server.send(200, "text/html", "");                                           \
+    const size_t CHUNK = 1024;                                                   \
+    char buf[CHUNK];                                                             \
+    PGM_P p = EMBEDDED_WEBUI;                                                    \
+    while (true) {                                                               \
+      size_t n = 0;                                                              \
+      for (; n < CHUNK; ++n) {                                                   \
+        char c = pgm_read_byte(p++);                                             \
+        if (c == 0) break;                                                       \
+        buf[n] = c;                                                              \
+      }                                                                          \
+      if (n) {                                                                   \
+        server.sendContent(buf, n); /* send from RAM buffer */                   \
+        yield();                                                                 \
+      }                                                                          \
+      if (n < CHUNK) break;                                                      \
+    }                                                                            \
+    server.sendContent("");                                                      \
+  }
+#endif
+
 const char EMBEDDED_WEBUI[] PROGMEM = R"EMB1(
 <!DOCTYPE html>
 <html>
@@ -370,6 +400,7 @@ const char EMBEDDED_WEBUI[] PROGMEM = R"EMB1(
       <h2>System & Maintenance</h2>
       <div class="system-controls">
         <button onclick="window.location.href='/update_wrapper'" class="section-save-btn">Firmware Update</button>
+        <a href="/diagnostics" class="section-save-btn" download>Download Diagnostics</a>
         <a href="/history.csv" class="section-save-btn" download>Download History (CSV)</a>
         <button onclick="restartDevice()" class="section-save-btn btn-danger">Restart Device</button>
         <button onclick="resetConfig()" class="section-save-btn btn-danger">Reset to Defaults</button>
@@ -1044,4 +1075,3 @@ const char EMBEDDED_WEBUI[] PROGMEM = R"EMB1(
 </body>
 </html>
 )EMB1";
-#endif

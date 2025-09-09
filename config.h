@@ -106,6 +106,7 @@ inline void loadConfig() {
   if (config.magic != EEPROM_MAGIC) {
 #if DEBUG_SERIAL
     Serial.println("[WARN] Invalid config in EEPROM or first boot. Loading defaults.");
+    logDiagnostics("[WARN] Invalid config in EEPROM. Loading defaults.");
 #endif
     // Load default values from hardware.h
     config.fanOnTemp = FAN_ON_TEMP_DEFAULT;
