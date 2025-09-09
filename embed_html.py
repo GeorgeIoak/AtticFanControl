@@ -31,38 +31,26 @@ STREAM_HELPER = r"""
 // NOTE: Assumes you have a global 'ESP8266WebServer server(80);'
 // If your instance is named differently, set WEBUI_EMIT_STREAM_HELPER=0
 // and paste a custom handler in your route file.
-#include <ESP8266WebServer.h>
-#define WEBUI_DEFINE_CHUNKED_HANDLER(name)                                      \
-  static void name() {                                                           \
-    extern ESP8266WebServer server;                                              \
-    server.setContentLength(CONTENT_LENGTH_UNKNOWN);                             \
-    server.send(200, "text/html", "");                                           \
-    const size_t CHUNK = 1024;                                                   \
-    char buf[CHUNK];                                                             \
-    PGM_P p = EMBEDDED_WEBUI;                                                    \
-    while (true) {                                                               \
-      size_t n = 0;                                                              \
-      for (; n < CHUNK; ++n) {                                                   \
-        char c = pgm_read_byte(p++);                                             \
-        if (c == 0) break;                                                       \
-        buf[n] = c;                                                              \
-      }                                                                          \
-      if (n) {                                                                   \
-        server.sendContent(buf, n); /* send from RAM buffer */                   \
-        yield();                                                                 \
-      }                                                                          \
-      if (n < CHUNK) break;                                                      \
-    }                                                                            \
-    server.sendContent("");                                                      \
-  }
+#include <ESP8266WebServer.h>                                                   
+static void {func_name}() {{
+  extern ESP8266WebServer server;                                              
+  server.sendHeader("Connection", "close");                                   
+  server.send_P(200, "text/html",                                               
+                {var_name},
+                sizeof({var_name}) - 1);
+}}
 #endif
 """
-
 TEMPLATE_PLAIN = """{preamble}
-{stream_helper}
-const char EMBEDDED_WEBUI[] PROGMEM = R"{delim}(
+const char EMBEDDED_WEBUI[] PROGMEM = R"EMB1(
 {html}
-){delim}";
+)EMB1";"""
+
+TEMPLATE_PLAIN_NAMED = """{preamble}
+const char {var_name}[] PROGMEM = R"EMB1(
+{html}
+)EMB1";
+{stream_helper}
 """
 
 TEMPLATE_GZIP = """{preamble}
@@ -77,6 +65,8 @@ def main():
     ap = argparse.ArgumentParser(description="Embed an HTML file into a C header for ESP8266/ESP32.")
     ap.add_argument("input", help="Path to index.html")
     ap.add_argument("output", help="Path to write header, e.g. webui_embedded.h")
+    ap.add_argument("--var-name", default="EMBEDDED_WEBUI", help="Name for the PROGMEM char array variable.")
+    ap.add_argument("--func-name", default="handleEmbeddedWebUI", help="Name for the generated handler function.")
     ap.add_argument("--no-stream-helper", action="store_true", help="Do not emit the WEBUI_DEFINE_CHUNKED_HANDLER macro")
     ap.add_argument("--gzip", action="store_true", help="Store gzipped payload instead of plain HTML")
     args = ap.parse_args()
@@ -86,7 +76,7 @@ def main():
     html = src.read_text(encoding="utf-8")
 
     preamble = HEADER_PREAMBLE.format(src_name=src.name)
-    stream_helper = "" if args.no_stream_helper else STREAM_HELPER
+    stream_helper = "" if args.no_stream_helper else STREAM_HELPER.format(var_name=args.var_name, func_name=args.func_name)
 
     if args.gzip:
         gz = gzip.compress(html.encode("utf-8"))
@@ -106,11 +96,11 @@ def main():
         )
     else:
         delim = pick_delimiter(html)
-        content = TEMPLATE_PLAIN.format(
+        content = TEMPLATE_PLAIN_NAMED.format(
             preamble=preamble,
             stream_helper=stream_helper,
-            delim=delim,
-            html=html
+            html=html,
+            var_name=args.var_name
         )
 
     dst.write_text(content, encoding="utf-8")

@@ -1,8 +1,13 @@
 #pragma once
+#include <pgmspace.h>
 
-#if !USE_FS_WEBUI
+// Auto-generated from help.html. Do not edit by hand.
+// To define the chunked handler automatically, keep WEBUI_EMIT_STREAM_HELPER=1
+#ifndef WEBUI_EMIT_STREAM_HELPER
+#define WEBUI_EMIT_STREAM_HELPER 1
+#endif
 
-const char HELP_PAGE[] PROGMEM = R"rawliteral(
+const char HELP_PAGE[] PROGMEM = R"EMB1(
 <!DOCTYPE html>
 <html>
 <head>
@@ -26,7 +31,7 @@ const char HELP_PAGE[] PROGMEM = R"rawliteral(
 <body>
   <div class="page-container">
     <h1>Help & Documentation</h1>
-    <a href="/" class="back-link">&larr; Back to Main Control Page</a>
+  <a href="/" class="back-link">&larr; Back to Main Control Page</a>
 
     <section id="mode-control">
       <h2>Mode Control</h2>
@@ -94,9 +99,10 @@ const char HELP_PAGE[] PROGMEM = R"rawliteral(
         <dd>Enables the "Test Panel" at the bottom of the main page, which contains sliders to simulate sensor values. This allows you to test the fan's automation logic without needing physical sensors or specific environmental conditions.</dd>
       </dl>
     </section>
+
     <section id="history">
       <h2>History Chart & CSV Log</h2>
-  <p>The <strong>History</strong> section on the main page shows a chart of attic temperature, outdoor temperature, and humidity over time. This data is logged at a configurable interval (default: 5 minutes) and stored in a CSV file on the device. You can adjust the logging interval in the configuration section for finer or coarser history detail.</p>
+      <p>The <strong>History</strong> section on the main page shows a chart of attic temperature, outdoor temperature, and humidity over time. This data is logged at a configurable interval (default: 5 minutes) and stored in a CSV file on the device. You can adjust the logging interval in the configuration section for finer or coarser history detail.</p>
       <ul>
         <li><strong>Chart:</strong> Visualizes recent trends (up to 100 points) for quick analysis. The purple shaded area at the bottom indicates when the fan was on.</li>
         <li><strong>Download:</strong> Click <em>Download History (CSV)</em> in the System & Maintenance section to save the complete log for offline use.</li>
@@ -114,7 +120,6 @@ const char HELP_PAGE[] PROGMEM = R"rawliteral(
         <dd>Use the "Firmware Update" link in the System & Maintenance section of the web UI.</dd>
       </dl>
     </section>
-
     <section id="api-reference">
       <h2>API Reference</h2>
       <p>The controller exposes several API endpoints for programmatic control and integration.</p>
@@ -154,6 +159,19 @@ const char HELP_PAGE[] PROGMEM = R"rawliteral(
   </div>
 </body>
 </html>
-)rawliteral";
+)EMB1";
 
-#endif // !USE_FS_WEBUI
+#if WEBUI_EMIT_STREAM_HELPER
+// NOTE: Assumes you have a global 'ESP8266WebServer server(80);'
+// If your instance is named differently, set WEBUI_EMIT_STREAM_HELPER=0
+// and paste a custom handler in your route file.
+#include <ESP8266WebServer.h>                                                   
+static void handleHelpPage() {
+  extern ESP8266WebServer server;                                              
+  server.sendHeader("Connection", "close");                                   
+  server.send_P(200, "text/html",                                               
+                HELP_PAGE,
+                sizeof(HELP_PAGE) - 1);
+}
+#endif
+

@@ -16,11 +16,11 @@ extern float simulatedAtticHumidity;
 // Helper for jump check and logging
 inline float validateSensorJump(const char* label, float newValue, float lastGood, float maxDelta) {
   if (fabs(newValue - lastGood) > maxDelta) {
-#if DEBUG_SERIAL
-    Serial.printf("[WARN] %s jump: %.1f -> %.1f\n", label, lastGood, newValue);
-#endif
     char buf[80];
     snprintf(buf, sizeof(buf), "[WARN] %s jump: %.1f -> %.1f", label, lastGood, newValue);
+    #if DEBUG_SERIAL
+    logSerial("%s", buf);
+    #endif
     logDiagnostics(buf);
     return lastGood;
   }
@@ -50,31 +50,24 @@ DFRobot_SHT20 sht21(&Wire, SHT21_I2C_ADDR);
 
 // === Sensor Initialization ===
 inline void initSensors() {
-#if DEBUG_SERIAL
-  bool anySensorEnabled = false;
-#endif
 #if HAS_SHT21
   Wire.begin(SHT21_SDA_PIN, SHT21_SCL_PIN);
   sht21.initSHT20();
-#if DEBUG_SERIAL
-  anySensorEnabled = true;
-#endif
 #endif
 
 #if HAS_DS18B20
   ds18b20.begin();
-#if DEBUG_SERIAL
-  anySensorEnabled = true;
-#endif
 #endif
 
-#if DEBUG_SERIAL
-  if (anySensorEnabled) {
-    Serial.println("[INFO] Physical sensors initialized.");
+  if (HAS_SHT21 || HAS_DS18B20) {
+    #if DEBUG_SERIAL
+    logSerial("[INFO] Physical sensors initialized.");
+    #endif
   } else {
-    Serial.println("[INFO] No physical sensors enabled. Using mock data.");
+    #if DEBUG_SERIAL
+    logSerial("[INFO] No physical sensors enabled. Using mock data.");
+    #endif
   }
-#endif
 }
 
 // === Attic Temperature (SHT21 or fallback) ===

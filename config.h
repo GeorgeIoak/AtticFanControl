@@ -50,10 +50,11 @@ void clearResetFlag() {
 inline void saveConfig() {
   config.magic = EEPROM_MAGIC; // Set the magic number before saving
   EEPROM.put(0, config);
-  EEPROM.commit();
-#if DEBUG_SERIAL
-  Serial.println("[INFO] Configuration saved to EEPROM.");
-#endif
+  if (EEPROM.commit()) {
+    #if DEBUG_SERIAL
+    logSerial("[INFO] Configuration saved to EEPROM.");
+    #endif
+  }
 }
 
 /**
@@ -63,11 +64,11 @@ inline void clearConfig() {
   setResetFlag();
   config.magic = 0; // Invalidate the magic number
   EEPROM.put(0, config);
-  EEPROM.commit();
-  delay(500);
-#if DEBUG_SERIAL
-  Serial.println("[INFO] Configuration cleared from EEPROM.");
-#endif
+  if (EEPROM.commit()) {
+    #if DEBUG_SERIAL
+    logSerial("[INFO] Configuration cleared from EEPROM.");
+    #endif
+  }
 }
 
 /**
@@ -79,9 +80,9 @@ inline void loadConfig() {
   
   if (isResetFlagged()) {
     clearResetFlag();
-#if DEBUG_SERIAL
-    Serial.println("[INFO] Reset flag detected. Loading default configuration.");
-#endif
+    #if DEBUG_SERIAL
+    logSerial("[INFO] Reset flag detected. Loading default configuration.");
+    #endif
     // Load default values from hardware.h
     config.fanOnTemp = FAN_ON_TEMP_DEFAULT;
     config.fanDeltaTemp = FAN_DELTA_TEMP_DEFAULT;
@@ -104,10 +105,10 @@ inline void loadConfig() {
 
   // Check if the magic number matches. If not, data is invalid.
   if (config.magic != EEPROM_MAGIC) {
-#if DEBUG_SERIAL
-    Serial.println("[WARN] Invalid config in EEPROM or first boot. Loading defaults.");
+    #if DEBUG_SERIAL
+    logSerial("[WARN] Invalid config in EEPROM or first boot. Loading defaults.");
+    #endif
     logDiagnostics("[WARN] Invalid config in EEPROM. Loading defaults.");
-#endif
     // Load default values from hardware.h
     config.fanOnTemp = FAN_ON_TEMP_DEFAULT;
     config.fanDeltaTemp = FAN_DELTA_TEMP_DEFAULT;
@@ -124,28 +125,28 @@ inline void loadConfig() {
     // Save the default configuration for next time
     saveConfig();
   } else {
-#if DEBUG_SERIAL
-    Serial.println("[INFO] Configuration loaded from EEPROM.");
-    Serial.printf("  - Fan On Temp: %.1f°F\n", config.fanOnTemp);
-    Serial.printf("  - Fan Delta Temp: %.1f°F\n", config.fanDeltaTemp);
-    Serial.printf("  - Fan Hysteresis: %.1f°F\n", config.fanHysteresis);
-    Serial.printf("  - Pre-Cool Trigger: %.1f°F\n", config.preCoolTriggerTemp);
-    Serial.printf("  - Pre-Cool Offset: %.1f°F\n", config.preCoolTempOffset);
-    Serial.printf("  - Pre-Cooling Enabled: %s\n", config.preCoolingEnabled ? "true" : "false");
-    Serial.printf("  - Onboard LED Enabled: %s\n", config.onboardLedEnabled ? "true" : "false");
-    Serial.printf("  - Test Mode Enabled: %s\n", config.testModeEnabled ? "true" : "false");
-    Serial.printf("  - Daily Restart Enabled: %s\n", config.dailyRestartEnabled ? "true" : "false");
-    Serial.printf("  - MQTT Enabled: %s\n", config.mqttEnabled ? "true" : "false");
-    Serial.printf("  - MQTT Discovery Enabled: %s\n", config.mqttDiscoveryEnabled ? "true" : "false");
-    Serial.printf("  - History Log Interval: %lu ms\n", config.historyLogIntervalMs);
-#endif
+    #if DEBUG_SERIAL
+    logSerial("[INFO] Configuration loaded from EEPROM.");
+    logSerial("  - Fan On Temp: %.1f°F", config.fanOnTemp);
+    logSerial("  - Fan Delta Temp: %.1f°F", config.fanDeltaTemp);
+    logSerial("  - Fan Hysteresis: %.1f°F", config.fanHysteresis);
+    logSerial("  - Pre-Cool Trigger: %.1f°F", config.preCoolTriggerTemp);
+    logSerial("  - Pre-Cool Offset: %.1f°F", config.preCoolTempOffset);
+    logSerial("  - Pre-Cooling Enabled: %s", config.preCoolingEnabled ? "true" : "false");
+    logSerial("  - Onboard LED Enabled: %s", config.onboardLedEnabled ? "true" : "false");
+    logSerial("  - Test Mode Enabled: %s", config.testModeEnabled ? "true" : "false");
+    logSerial("  - Daily Restart Enabled: %s", config.dailyRestartEnabled ? "true" : "false");
+    logSerial("  - MQTT Enabled: %s", config.mqttEnabled ? "true" : "false");
+    logSerial("  - MQTT Discovery Enabled: %s", config.mqttDiscoveryEnabled ? "true" : "false");
+    logSerial("  - History Log Interval: %lu ms", config.historyLogIntervalMs);
+    #endif
 
     // Sanity check for the history log interval. If the value from EEPROM is corrupt or
     // outside a reasonable range (1 min to 24 hours), reset it to the default.
     if (config.historyLogIntervalMs < 60000UL || config.historyLogIntervalMs > 86400000UL) {
-#if DEBUG_SERIAL
-      Serial.printf("[WARN] Invalid history log interval (%lu ms) from EEPROM. Resetting to default (%lu ms).\n", config.historyLogIntervalMs, HISTORY_LOG_INTERVAL_DEFAULT);
-#endif
+      #if DEBUG_SERIAL
+      logSerial("[WARN] Invalid history log interval (%lu ms) from EEPROM. Resetting to default (%lu ms).", config.historyLogIntervalMs, HISTORY_LOG_INTERVAL_DEFAULT);
+      #endif
       config.historyLogIntervalMs = HISTORY_LOG_INTERVAL_DEFAULT;
       saveConfig(); // Save the corrected configuration.
     }
