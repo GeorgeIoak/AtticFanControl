@@ -34,7 +34,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     p[length] = '\0';
 
     #if DEBUG_SERIAL
-    Serial.printf("[MQTT] Message arrived [%s]: %s\n", topic, p);
+    logSerial("[MQTT] Message arrived [%s]: %s", topic, p);
     #endif
 
     if (strcmp(topic, commandTopic) == 0) {
@@ -129,7 +129,7 @@ void publishDiscovery() {
     }
 
     #if DEBUG_SERIAL
-    Serial.println("[MQTT] Published Home Assistant discovery messages.");
+    logSerial("[MQTT] Published Home Assistant discovery messages.");
     #endif
 }
 
@@ -141,12 +141,12 @@ void reconnectMqtt() {
         return;
     }
     #if DEBUG_SERIAL
-    Serial.print("[MQTT] Attempting connection...");
+    logSerial("[MQTT] Attempting connection...");
     #endif
     String clientId = "AtticFan-" + WiFi.macAddress();
     if (mqttClient.connect(clientId.c_str(), mqtt_user, mqtt_password)) {
         #if DEBUG_SERIAL
-        Serial.println(" connected!");
+        logSerial("[MQTT] Connection successful!");
         #endif
         mqttClient.subscribe(commandTopic);
         mqttClient.subscribe(modeCommandTopic);
@@ -155,7 +155,7 @@ void reconnectMqtt() {
         }
     } else {
         #if DEBUG_SERIAL
-        Serial.printf(" failed, rc=%d. Will try again in 5 seconds.\n", mqttClient.state());
+        logSerial("[MQTT] Connection failed, rc=%d. Will try again in 5 seconds.", mqttClient.state());
         #endif
     }
 }
@@ -222,7 +222,7 @@ void initMqtt() {
  */
 void reinitMqtt() {
     #if DEBUG_SERIAL
-    Serial.println("[MQTT] Re-initializing MQTT client...");
+    logSerial("[MQTT] Re-initializing MQTT client...");
     #endif
     if (mqttClient.connected()) {
         mqttClient.disconnect();

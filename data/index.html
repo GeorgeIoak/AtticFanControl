@@ -360,6 +360,7 @@
       <div class="system-controls">
         <button onclick="window.location.href='/update_wrapper'" class="section-save-btn">Firmware Update</button>
         <a href="/diagnostics" class="section-save-btn" download>Download Diagnostics</a>
+        <button onclick="clearDiagnostics()" class="section-save-btn">Clear Diagnostics</button>
         <a href="/history.csv" class="section-save-btn" download>Download History (CSV)</a>
         <button onclick="restartDevice()" class="section-save-btn btn-danger">Restart Device</button>
         <button onclick="resetConfig()" class="section-save-btn btn-danger">Reset to Defaults</button>
@@ -953,6 +954,23 @@
         fetch('/test/force_ap')
           .then(() => showToast("AP Mode command sent."))
           .catch(err => console.error("Failed to force AP mode:", err));
+      }
+    }
+
+    function clearDiagnostics() {
+      if (testMode) {
+        alert("Clear diagnostics command sent (test mode)."); return;
+      }
+      if (confirm("Are you sure you want to permanently delete the diagnostics log? This action cannot be undone.")) {
+        fetch("/clear_diagnostics")
+          .then(res => res.text())
+          .then(text => {
+            showToast(text);
+          })
+          .catch(err => {
+            console.error("Failed to clear diagnostics:", err);
+            showToast("Error clearing diagnostics log.");
+          });
       }
     }
 

@@ -13,6 +13,7 @@
 #include "weather.h"
 #include "types.h"
 
+extern void logDiagnostics(const char* msg);
 extern ESP8266WebServer server;
 
 // To access the global timer state from the main .ino file
@@ -35,18 +36,20 @@ inline void handleHistoryDownload(ESP8266WebServer &server) {
   }
 }
 
-inline void handleRoot(ESP8266WebServer &server) {
-#if USE_FS_WEBUI
-  File f = LittleFS.open("/index.html", "r");
-  if (f) {
-    server.streamFile(f, "text/html");
-    f.close();
+/**
+ * @brief Handles requests to clear the diagnostics log file.
+ */
+inline void handleClearDiagnostics(ESP8266WebServer &server) {
+  if (LittleFS.exists(DIAGNOSTICS_LOG_PATH)) {
+    if (LittleFS.remove(DIAGNOSTICS_LOG_PATH)) {
+      logDiagnostics("[INFO] Diagnostics log cleared by user.");
+      server.send(200, "text/plain", "Diagnostics log cleared successfully.");
+    } else {
+      server.send(500, "text/plain", "Failed to clear diagnostics log.");
+    }
   } else {
-    server.send(404, "text/plain", "index.html not found on filesystem.");
+    server.send(200, "text/plain", "Diagnostics log was already empty.");
   }
-#else
-  server.send_P(200, "text/html", EMBEDDED_WEBUI);
-#endif
 }
 
 inline void handleHelp(ESP8266WebServer &server) {
@@ -59,7 +62,7 @@ inline void handleHelp(ESP8266WebServer &server) {
     server.send(404, "text/plain", "help.html not found on filesystem.");
   }
 #else
-  server.send_P(200, "text/html", HELP_PAGE);
+  server.send_P(200, "text/html", HELP_PAGE, sizeof(HELP_PAGE) - 1);
 #endif
 }
 
@@ -82,6 +85,7 @@ inline void handleFan(ESP8266WebServer &server, FanMode &fanMode) {
       unsigned long duration = doc["duration"];
       const char* postActionStr = doc["postAction"];
       
+      logDiagnostics("[ACTION] Manual timer started via web UI.");
       PostTimerAction postAction = (strcmp(postActionStr, "revert_to_auto") == 0) ? REVERT_TO_AUTO : STAY_MANUAL;
       
       startManualTimer(delay, duration, postAction);
@@ -93,6 +97,7 @@ inline void handleFan(ESP8266WebServer &server, FanMode &fanMode) {
   } else { // Handle simple GET requests
     String state = server.arg("state");
     if (state == "on") {
+      logDiagnostics("[ACTION] Fan turned ON manually via web UI.");
       cancelManualTimer();
       fanMode = MANUAL_ON;
       setFanState(true);
@@ -100,15 +105,18 @@ inline void handleFan(ESP8266WebServer &server, FanMode &fanMode) {
     } else if (state == "ping") {
       server.send(200, "text/plain", "pong");
     } else if (state == "auto") {
+      logDiagnostics("[ACTION] Mode changed to AUTO via web UI.");
       cancelManualTimer();
       fanMode = AUTO;
       server.send(200, "text/plain", "Mode set to AUTO");
     } else if (state == "off") {
+      logDiagnostics("[ACTION] Fan turned OFF manually via web UI.");
       cancelManualTimer();
       fanMode = MANUAL_OFF;
       setFanState(false);
       server.send(200, "text/plain", "OFF");
     } else {
+      logDiagnostics("[WARN] Invalid state received in handleFan.");
       server.send(400, "text/plain", "Invalid state");
     }
   }
@@ -172,17 +180,25 @@ inline void handleStatus(ESP8266WebServer &server, FanMode fanMode) {
   server.send(200, "application/json", doc.as<String>());
 }
 
+/**
+ * @brief Logs the reason for a restart and then restarts the device.
+ * @param reason The reason for the restart, to be logged.
+ */
+inline void logAndRestart(const char* reason) {
+  logDiagnostics(reason);
+  delay(100); // Short delay to allow log to write
+  ESP.restart();
+}
+
 inline void handleRestart(ESP8266WebServer &server) {
   server.send(200, "text/plain", "Restarting...");
-  delay(100);
-  ESP.restart();
+  logAndRestart("[RESTART] Manual restart from web UI.");
 }
 
 inline void handleResetConfig(ESP8266WebServer &server) {
   setResetFlag();
   server.send(200, "text/plain", "Configuration reset. Restarting...");
-  delay(100);
-  ESP.restart();
+  logAndRestart("[RESTART] Configuration reset from web UI.");
 }
 
 inline void handleGetConfig(ESP8266WebServer &server) {
@@ -309,21 +325,15 @@ inline void handleSetTestTemps(ESP8266WebServer &server) {
  * @brief Test endpoint to force the device into AP mode.
  */
 inline void handleForceAP(ESP8266WebServer &server) {
-    Serial.println("[TEST] Forcing AP mode via web request...");
+    #if DEBUG_SERIAL
+    logSerial("[TEST] Forcing AP mode via web request...");
+    #endif
     WiFi.mode(WIFI_AP);
     WiFi.softAP(AP_SSID, AP_PASSWORD);
     dnsServer.start(53, "*", WiFi.softAPIP());
     apModeActive = true;
     server.send(200, "text/plain", "AP Mode Forced. Connect to 'AtticFanSetup'.");
 }
-
-static void handleRootOneShot() {
-  server.sendHeader("Connection", "close");   // force socket close
-  server.send_P(200, "text/html",
-                EMBEDDED_WEBUI,
-                sizeof(EMBEDDED_WEBUI) - 1);  // compile-time length
-}
-
 
 /**
  * @brief Serves a wrapper page for the OTA update UI.

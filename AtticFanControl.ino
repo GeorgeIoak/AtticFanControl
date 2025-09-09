@@ -11,7 +11,7 @@
 #include "secrets.h"
 #include "config.h"
 #include "weather.h"
-
+#include <time.h>
 #include "mqtt_handler.h"
 
 #include "types.h"
@@ -43,6 +43,7 @@ unsigned long lastDailyRestartCheck = 0;
 bool staConnectionFailed = false;
 bool apModeActive = false;
 bool dailyRestartPending = false;
+bool ntpHasSynced = false;
 bool wifiWasConnected = false;
 
 // Test Mode State Variables (always declared, only used if test mode is enabled)
@@ -52,6 +53,33 @@ float simulatedAtticHumidity = 50.0; // A reasonable default for humidity
 
 // === Timer State ===
 ManualTimerState manualTimer;
+
+/**
+ * @brief Prints a formatted, timestamped message to the Serial console.
+ * This is a placeholder for testing.
+ */
+void logSerial(const char* format, ...) {
+#if DEBUG_SERIAL
+  char timestamp[30];
+  if (ntpHasSynced) {
+    time_t now;
+    time(&now);
+    struct tm* timeinfo = localtime(&now);
+    strftime(timestamp, sizeof(timestamp), "[%Y-%m-%d %H:%M:%S]", timeinfo);
+  } else {
+    snprintf(timestamp, sizeof(timestamp), "[%lu]", millis());
+  }
+  Serial.print(timestamp);
+  Serial.print(" "); // Add a space after the timestamp
+
+  char buffer[128]; // Keep buffer size reasonable to conserve stack
+  va_list args;
+  va_start(args, format);
+  vsnprintf(buffer, sizeof(buffer), format, args);
+  va_end(args);
+  Serial.println(buffer);
+#endif
+}
 
 /**
  * @brief Sets the fan relay and onboard LED to a specific state.
@@ -76,7 +104,7 @@ void startManualTimer(unsigned long delayMinutes, unsigned long durationMinutes,
     setFanState(true);
   }
   #if DEBUG_SERIAL
-  Serial.printf("[INFO] Manual timer started. Delay: %lu min, Duration: %lu min.\n", delayMinutes, durationMinutes);
+  Serial.printf("[%lu] [INFO] Manual timer started. Delay: %lu min, Duration: %lu min.\n", millis(), delayMinutes, durationMinutes);
   #endif
 }
 
@@ -86,7 +114,9 @@ void startManualTimer(unsigned long delayMinutes, unsigned long durationMinutes,
 void cancelManualTimer() {
   if (manualTimer.isActive) {
     manualTimer.isActive = false;
-    Serial.println("[INFO] Manual timer cancelled.");
+    #if DEBUG_SERIAL
+    Serial.printf("[%lu] [INFO] Manual timer cancelled.\n", millis());
+    #endif
   }
 }
 
@@ -102,9 +132,12 @@ void setup() {
 
   // Mount the filesystem
   if (!LittleFS.begin()) {
-    Serial.println("Failed to mount LittleFS. Formatting...");
+    #if DEBUG_SERIAL
+    Serial.printf("[%lu] [ERROR] Failed to mount LittleFS. Formatting...\n", millis());
+    #endif
     logDiagnostics("[ERROR] Failed to mount LittleFS. Formatting...");
     LittleFS.format();
+    logDiagnostics("[INFO] Filesystem formatted.");
   }
 
   // Create history file promptly after boot for the UI chart
@@ -120,12 +153,24 @@ void setup() {
   WiFi.begin(ssid, password);
   WiFi.setSleep(false);                    
   WiFi.hostname(MDNS_HOSTNAME);
-  Serial.println("Initiated WiFi connection...");
+  #if DEBUG_SERIAL
+  Serial.printf("[%lu] Initiated WiFi connection...\n", millis());
+  #endif
+
+  // --- NTP Time Setup ---
+  #if DEBUG_SERIAL
+  Serial.printf("[%lu] [NTP] Initiating time synchronization...\n", millis());
+  #endif
+  // TZ String for Pacific Time (PST/PDT). Find others at https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
+  configTime("PST8PDT,M3.2.0,M11.1.0", "pool.ntp.org");
+
+  // Log a boot message. This ensures the diagnostics file is created.
+  logDiagnostics("-------------------- [BOOT] Device starting up --------------------");
 
   // -------------------------
   // Route registration
   // -------------------------
-  server.on("/", handleRootOneShot);
+  server.on("/", handleEmbeddedWebUI);
   server.on("/help", [](){ handleHelp(server); });
   server.on("/fan", HTTP_ANY, [&](){ handleFan(server, fanMode); });
   server.on("/status", [&](){ handleStatus(server, fanMode); });
@@ -139,6 +184,7 @@ void setup() {
   server.on("/history.csv", HTTP_GET, [](){ handleHistoryDownload(server); });
   server.on("/restart", [](){ handleRestart(server); });
   server.on("/reset_config", [](){ handleResetConfig(server); });
+  server.on("/clear_diagnostics", [](){ handleClearDiagnostics(server); });
   server.on("/diagnostics", [](){ handleDiagnosticsDownload(server); });
   server.on("/update_wrapper", HTTP_GET, [](){ handleUpdateWrapper(server); });
   ElegantOTA.begin(&server, ota_user, ota_password);
@@ -155,10 +201,12 @@ void setup() {
       type = "filesystem";
       LittleFS.end();
     }
-    Serial.println("Start updating " + type);
+    #if DEBUG_SERIAL
+    Serial.printf("[%lu] Start updating %s\n", millis(), type.c_str());
+    #endif
   });
   ArduinoOTA.onEnd([]() {
-    Serial.println("\nEnd");
+    Serial.printf("\n[%lu] End\n", millis());
   });
   ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
     Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
@@ -174,7 +222,9 @@ void setup() {
   server.begin();
   delay(10);
   yield();
-  Serial.println("HTTP server started");
+  #if DEBUG_SERIAL
+  Serial.printf("[%lu] HTTP server started\n", millis());
+  #endif
 }
 
 
@@ -191,14 +241,17 @@ void handleWiFiConnection() {
   if (WiFi.status() == WL_CONNECTED) {
     if (!wifiWasConnected) {
       // This block runs ONCE when the state changes to connected.
-      Serial.println("\nWiFi connected!");
-      Serial.println("IP address: " + WiFi.localIP().toString());
+      #if DEBUG_SERIAL
+      Serial.printf("\n[%lu] WiFi connected! IP address: %s\n", millis(), WiFi.localIP().toString().c_str());
+      #endif
       
       // Reset the retry backoff timer for any future disconnections
       wifiRetryInterval = WIFI_INITIAL_RETRY_DELAY_MS;
       
       if (MDNS.begin(MDNS_HOSTNAME)) {
-        Serial.printf("mDNS responder started. Access at http://%s.local\n", MDNS_HOSTNAME);
+        #if DEBUG_SERIAL
+        Serial.printf("[%lu] mDNS responder started. Access at http://%s.local\n", millis(), MDNS_HOSTNAME);
+        #endif
         MDNS.addService("http", "tcp", 80);
         // Explicitly advertise the Arduino OTA service. This is what the IDE looks for.
         MDNS.addService("arduino", "tcp", 8266);
@@ -207,7 +260,7 @@ void handleWiFiConnection() {
       
       // Trigger an immediate weather update on first connect
       #if DEBUG_SERIAL
-      Serial.println("[INFO] WiFi connected, triggering initial weather update.");
+      Serial.printf("[%lu] [INFO] WiFi connected, triggering initial weather update.\n", millis());
       #endif
       lastWeatherUpdate = 0;
       
@@ -226,14 +279,18 @@ void handleWiFiConnection() {
 
   if (!staConnectionFailed) { // Only try to reconnect if we haven't given up yet.
     if (millis() - lastWifiRetry >= wifiRetryInterval) {
-      Serial.printf("WiFi disconnected. Retrying connection (interval: %lu s)...\n", wifiRetryInterval / 1000);
+      #if DEBUG_SERIAL
+      Serial.printf("[%lu] WiFi disconnected. Retrying connection (interval: %lu s)...\n", millis(), wifiRetryInterval / 1000);
+      #endif
       WiFi.begin(ssid, password); // Re-trigger connection attempt
       lastWifiRetry = millis();
       
       wifiRetryInterval *= WIFI_RETRY_BACKOFF_FACTOR;
       if (wifiRetryInterval > WIFI_MAX_RETRY_DELAY_MS) {
         wifiRetryInterval = WIFI_MAX_RETRY_DELAY_MS;
-        Serial.println("Final WiFi connection attempt failed. Will switch to AP mode if enabled.");
+        #if DEBUG_SERIAL
+        Serial.printf("[%lu] Final WiFi connection attempt failed. Will switch to AP mode if enabled.\n", millis());
+        #endif
         staConnectionFailed = true;
       }
     }
@@ -242,12 +299,14 @@ void handleWiFiConnection() {
   // --- Handle AP Fallback ---
   if (staConnectionFailed) {
 #if AP_FALLBACK_ENABLED
-    Serial.printf("Entering AP mode. SSID: %s, Password: %s\n", AP_SSID, AP_PASSWORD);
+    #if DEBUG_SERIAL
+    Serial.printf("[%lu] Entering AP mode. SSID: %s, Password: %s\n", millis(), AP_SSID, AP_PASSWORD);
+    #endif
     WiFi.mode(WIFI_AP);
     WiFi.softAP(AP_SSID, AP_PASSWORD);
     dnsServer.start(53, "*", WiFi.softAPIP()); // Start DNS server for captive portal
     if (MDNS.begin(MDNS_HOSTNAME)) {
-      Serial.printf("mDNS responder started for AP mode. Access at http://%s.local\n", MDNS_HOSTNAME);
+      Serial.printf("[%lu] mDNS responder started for AP mode. Access at http://%s.local\n", millis(), MDNS_HOSTNAME);
     }
     apModeActive = true;
 #endif
@@ -266,7 +325,7 @@ void handleManualTimer() {
   // Check if delay period is over and fan is not yet on
   if (now >= manualTimer.delayEndTime && !fanIsOn && now < manualTimer.timerEndTime) {
     #if DEBUG_SERIAL
-    Serial.println("[INFO] Timer delay finished. Turning fan ON.");
+    Serial.printf("[%lu] [INFO] Timer delay finished. Turning fan ON.\n", millis());
     #endif
     setFanState(true);
   }
@@ -274,14 +333,14 @@ void handleManualTimer() {
   // Check if the total timer duration has expired
   if (now >= manualTimer.timerEndTime) {
     #if DEBUG_SERIAL
-    Serial.println("[INFO] Timed run finished.");
+    Serial.printf("[%lu] [INFO] Timed run finished.\n", millis());
     #endif
     setFanState(false); // Always turn fan off
 
     if (manualTimer.postAction == REVERT_TO_AUTO) {
       fanMode = AUTO;
       #if DEBUG_SERIAL
-      Serial.println("[INFO] Reverting to AUTO mode.");
+      Serial.printf("[%lu] [INFO] Reverting to AUTO mode.\n", millis());
       #endif
     } else {
       fanMode = MANUAL_OFF;
@@ -324,7 +383,12 @@ void updateStatusLED() {
   // Priority 3: Slow blink if fan is ON and in the hysteresis temperature zone.
   if (fanMode == AUTO && digitalRead(FAN_RELAY_PIN) == HIGH) {
     float atticTemp = readAtticTemp();
-    float effectiveFanOnTemp = config.fanOnTemp - (config.preCoolingEnabled && currentWeather.isValid && forecast[0].tempMax >= config.preCoolTriggerTemp ? config.preCoolTempOffset : 0);
+    float effectiveFanOnTemp = config.fanOnTemp;
+    // Safely check for pre-cooling conditions only if weather data is valid.
+    if (config.preCoolingEnabled && currentWeather.isValid) {
+        if (forecast[0].tempMax >= config.preCoolTriggerTemp)
+            effectiveFanOnTemp -= config.preCoolTempOffset;
+    }
     float turnOffTemp = effectiveFanOnTemp - config.fanHysteresis;
 
     if (atticTemp < effectiveFanOnTemp && atticTemp >= turnOffTemp) {
@@ -354,15 +418,15 @@ void handleDailyRestart() {
     bool fanIsOn = (digitalRead(FAN_RELAY_PIN) == HIGH);
     if (!fanIsOn) {
       #if DEBUG_SERIAL
-      Serial.println("[INFO] Fan is off. Proceeding with scheduled daily restart.");
+      Serial.printf("[%lu] [INFO] Fan is off. Proceeding with scheduled daily restart.\n", millis());
       #endif
-      ESP.restart(); // It's safe to restart now.
+      logAndRestart("[RESTART] Daily scheduled restart."); // It's safe to restart now.
     }
-    #if DEBUG_SERIAL
-    else {
-      Serial.println("[INFO] Daily restart is pending, but fan is running. Deferring restart.");
+    else { 
+      #if DEBUG_SERIAL
+      Serial.printf("[%lu] [INFO] Daily restart is pending, but fan is running. Deferring restart.\n", millis());
+      #endif
     }
-    #endif
     // If fan is on, we do nothing and wait for the next loop cycle to check again.
     return;
   }
@@ -373,7 +437,7 @@ void handleDailyRestart() {
     lastDailyRestartCheck = millis();
     if (millis() > 86400000UL) { // 24 hours in milliseconds
       #if DEBUG_SERIAL
-      Serial.println("[INFO] 24-hour mark reached. A daily restart is now pending, will execute when fan is off.");
+      Serial.printf("[%lu] [INFO] 24-hour mark reached. A daily restart is now pending, will execute when fan is off.\n", millis());
       #endif
       dailyRestartPending = true;
       // The actual restart is now handled by the logic at the top of this function.
@@ -388,6 +452,19 @@ void loop() {
   if (millis() - lastMdnsAnnounce > 30000) {  // every 30s
     MDNS.announce();                          // re-announce http + arduino services
     lastMdnsAnnounce = millis();
+  }
+
+  // --- NTP Sync Check (runs once) ---
+  if (!ntpHasSynced) {
+    time_t now;
+    time(&now);
+    struct tm* timeinfo = localtime(&now);
+    // tm_year is years since 1900. A value > 70 is a safe check for a valid year (e.g., 2023).
+    if (timeinfo && timeinfo->tm_year > 70) {
+      // This block runs only once when the time is first successfully retrieved.
+      ntpHasSynced = true;
+      logSerial("[NTP] SUCCESS: Time has been synchronized.");
+    }
   }
 
   // Handle IDE-based OTA updates.
@@ -420,7 +497,6 @@ void loop() {
     float atticHumidity = readAtticHumidity();
     float outdoorTemp = readOutdoorTemp();
 
-    #if DEBUG_SERIAL
     const char* modeStr;
     switch (fanMode) {
       case MANUAL_ON:
@@ -431,8 +507,8 @@ void loop() {
       default:
         modeStr = "AUTO";
     }
-    Serial.printf("Attic: %.1f°F, %.1f%% RH | Outdoor: %.1f°F | Mode: %s\n",
-                  atticTemp, atticHumidity, outdoorTemp, modeStr);
+    #if DEBUG_SERIAL
+    Serial.printf("[%lu] Attic: %.1f°F, %.1f%% RH | Outdoor: %.1f°F | Mode: %s\n", millis(), atticTemp, atticHumidity, outdoorTemp, modeStr);
     #endif
 
     // Only apply auto logic if in AUTO mode
@@ -445,7 +521,7 @@ void loop() {
       if (config.preCoolingEnabled && currentWeather.isValid && forecast[0].tempMax >= config.preCoolTriggerTemp) {
         effectiveFanOnTemp -= config.preCoolTempOffset;
         #if DEBUG_SERIAL
-        Serial.printf("[INFO] Pre-cooling active. Effective ON temp: %.1f°F\n", effectiveFanOnTemp);
+        Serial.printf("[%lu] [INFO] Pre-cooling active. Effective ON temp: %.1f°F\n", millis(), effectiveFanOnTemp);
         #endif
       }
       float turnOffTemp = effectiveFanOnTemp - config.fanHysteresis;
@@ -459,12 +535,12 @@ void loop() {
       if (fanIsOn && turnOffCondition) {
         setFanState(false);
         #if DEBUG_SERIAL
-          Serial.println("Fan turned OFF by auto logic (hysteresis/delta).");
+          Serial.printf("[%lu] Fan turned OFF by auto logic (hysteresis/delta).\n", millis());
         #endif
       } else if (!fanIsOn && turnOnCondition) {
         setFanState(true);
         #if DEBUG_SERIAL
-          Serial.println("Fan turned ON by auto logic.");
+          Serial.printf("[%lu] Fan turned ON by auto logic.\n", millis());
         #endif
       }
     }
@@ -473,11 +549,9 @@ void loop() {
     if (millis() - lastHistoryLog >= config.historyLogIntervalMs) {
       lastHistoryLog = millis();
       bool fanIsOn = (digitalRead(FAN_RELAY_PIN) == HIGH);
-      // Use weather timestamp if available, otherwise the log function will handle the null case.
-      const char* timestamp = (currentWeather.isValid && strlen(currentWeather.timeString) > 0) ? currentWeather.timeString : nullptr;
-      appendHistoryLog(timestamp, atticTemp, outdoorTemp, atticHumidity, fanIsOn);
+      appendHistoryLog(atticTemp, outdoorTemp, atticHumidity, fanIsOn);
       #if DEBUG_SERIAL
-      Serial.printf("[LOG] History: %s, %.2f, %.2f, %.2f, %d\n", timestamp ? timestamp : "N/A", atticTemp, outdoorTemp, atticHumidity, fanIsOn ? 1 : 0);
+      Serial.printf("[%lu] [LOG] History: %.2f, %.2f, %.2f, %d\n", millis(), atticTemp, outdoorTemp, atticHumidity, fanIsOn ? 1 : 0);
       #endif
     }
   }

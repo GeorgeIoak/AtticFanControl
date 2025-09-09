@@ -16,14 +16,23 @@ import shutil
 
 # --- Configuration ---
 # Add file pairs here to manage more embedded files.
+# Format: "source_path": {"dest": "dest_path", "var": "VARIABLE_NAME", "func": "functionName"}
 UI_FILES_TO_MANAGE = {
-    "data/index.html": "webui_embedded.h",
-    "data/help.html": "help_page.h"
+    "data/index.html": {
+        "dest": "webui_embedded.h",
+        "var": "EMBEDDED_WEBUI",
+        "func": "handleEmbeddedWebUI"
+    },
+    "data/help.html": {
+        "dest": "help_page.h",
+        "var": "HELP_PAGE",
+        "func": "handleHelpPage" # This function won't be used, but we generate it for consistency
+    }
 }
 POLL_INTERVAL_S = 1.0  # How often to check for file changes in watch mode.
 # ---------------------
 
-def run_embed_script(input_path: Path, output_path: Path):
+def run_embed_script(input_path: Path, output_path: Path, var_name: str, func_name: str):
     """Calls the embed_html.py script for a single file pair."""
     embed_script_path = Path(__file__).parent / "embed_html.py"
     if not embed_script_path.exists():
@@ -31,7 +40,8 @@ def run_embed_script(input_path: Path, output_path: Path):
         return False
 
     print(f"Regenerating {output_path.name} from {input_path.name}...")
-    cmd = [sys.executable, str(embed_script_path), str(input_path), str(output_path)]
+    cmd = [sys.executable, str(embed_script_path), str(input_path), str(output_path),
+           "--var-name", var_name, "--func-name", func_name]
     
     res = subprocess.run(cmd, capture_output=True, text=True, check=False)
     
@@ -46,12 +56,21 @@ def update_all_files():
     """Runs the update process for all configured files once."""
     print("Checking embedded UI files for updates...")
     files_updated = 0
-    for src, dest in UI_FILES_TO_MANAGE.items():
+    embed_script_path = Path(__file__).parent / "embed_html.py"
+    if not embed_script_path.exists():
+        print(f"[ERROR] embed_html.py not found at: {embed_script_path}", file=sys.stderr)
+        return
+
+    for src, config in UI_FILES_TO_MANAGE.items():
         src_path = Path(src)
-        dest_path = Path(dest)
-        # Regenerate if destination doesn't exist or if source is newer
-        if not dest_path.exists() or src_path.stat().st_mtime > dest_path.stat().st_mtime:
-            if run_embed_script(src_path, dest_path):
+        dest_path = Path(config["dest"])
+        var_name = config["var"]
+        func_name = config["func"]
+        # Regenerate if destination doesn't exist, or if source HTML or the embed script is newer.
+        if not dest_path.exists() or \
+           src_path.stat().st_mtime > dest_path.stat().st_mtime or \
+           embed_script_path.stat().st_mtime > dest_path.stat().st_mtime:
+            if run_embed_script(src_path, dest_path, var_name, func_name):
                 files_updated += 1
         else:
             print(f"{dest_path.name} is already up-to-date.")
@@ -60,9 +79,25 @@ def update_all_files():
         print(f"\nSuccessfully updated {files_updated} file(s). They have been added to your commit.")
     print("Check complete.")
 
+def cleanup_log_files():
+    """Removes log files from the data directory to prevent them from being baked into the firmware."""
+    print("  > Cleaning up temporary log files from /data directory...")
+    files_to_clean = ["data/history.csv", "data/diagnostics.log"]
+    cleaned_count = 0
+    for f_path in files_to_clean:
+        p = Path(f_path)
+        if p.exists():
+            p.unlink()
+            print(f"    - Removed {p.name}")
+            cleaned_count += 1
+    if cleaned_count == 0:
+        print("    - No temporary log files found to clean.")
+
 def build_filesystem():
     """Builds the LittleFS filesystem image from the 'data' directory."""
     print("Building LittleFS filesystem image (filesystem.bin)...")
+    cleanup_log_files()
+
     mklittlefs_path = shutil.which("mklittlefs")
     if not mklittlefs_path:
         print(
@@ -105,9 +140,10 @@ def watch_all_files():
         while True:
             time.sleep(POLL_INTERVAL_S)
             for src_path, last_mtime in last_mtimes.items():
+                config = UI_FILES_TO_MANAGE[str(src_path)]
                 if src_path.exists() and (mtime := src_path.stat().st_mtime) != last_mtime:
-                    dest_path = Path(UI_FILES_TO_MANAGE[str(src_path)])
-                    if run_embed_script(src_path, dest_path):
+                    dest_path = Path(config["dest"])
+                    if run_embed_script(src_path, dest_path, config["var"], config["func"]):
                         last_mtimes[src_path] = mtime
     except KeyboardInterrupt:
         print("\nWatcher stopped.")

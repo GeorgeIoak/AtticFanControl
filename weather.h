@@ -87,7 +87,7 @@ inline void updateWeatherData() {
 
   http.begin(client, url);
   #if DEBUG_SERIAL
-    Serial.println("[INFO] Updating weather data...");
+  logSerial("[INFO] Updating weather data...");
   #endif
   int httpCode = http.GET();
 
@@ -97,15 +97,16 @@ inline void updateWeatherData() {
     DeserializationError error = deserializeJson(doc, payload);
 
     if (error) {
-#if DEBUG_SERIAL
-      Serial.print("[ERROR] deserializeJson() failed: ");
-      Serial.println(error.c_str());
-#endif
+      #if DEBUG_SERIAL
+      logSerial("[ERROR] Weather JSON parsing failed: %s", error.c_str());
+      #endif
+      currentWeather.isValid = false;
+      http.end();
       return;
     }
 
-    // Safely parse current weather from the 'current' object
-    if (doc.containsKey("current")) {
+    // To be considered valid, both 'current' and 'daily' data must be present.
+    if (doc.containsKey("current") && doc.containsKey("daily")) {
       JsonObject current = doc["current"];
       currentWeather.temperature = current["temperature_2m"];
       currentWeather.humidity = current["relativehumidity_2m"];
@@ -113,40 +114,43 @@ inline void updateWeatherData() {
       const char* apiTime = current["time"] | "";
       strncpy(currentWeather.timeString, apiTime, sizeof(currentWeather.timeString) - 1);
       currentWeather.timeString[sizeof(currentWeather.timeString) - 1] = '\0';
-      currentWeather.isValid = true;
-    } else {
-      currentWeather.isValid = false; // Mark as invalid if 'current' object is missing
-    }
 
-    // Parse 3-day forecast
-    JsonArray daily_time = doc["daily"]["time"];
-    for (int i = 0; i < daily_time.size() && i < 3; i++) {
-      forecast[i].tempMax = doc["daily"]["temperature_2m_max"][i];
-      forecast[i].tempMin = doc["daily"]["temperature_2m_min"][i];
-      forecast[i].weatherCode = doc["daily"]["weathercode"][i];
-      const char* dateStr = daily_time[i];
-      if (dateStr) {
-        int year, month, day;
-        sscanf(dateStr, "%d-%d-%d", &year, &month, &day);
-        forecast[i].dayOfWeek = getDayOfWeek(year, month, day);
-      } else {
-        forecast[i].dayOfWeek = -1; // Invalid
+      // Parse 3-day forecast
+      JsonArray daily_time = doc["daily"]["time"];
+      for (int i = 0; i < daily_time.size() && i < 3; i++) {
+        forecast[i].tempMax = doc["daily"]["temperature_2m_max"][i];
+        forecast[i].tempMin = doc["daily"]["temperature_2m_min"][i];
+        forecast[i].weatherCode = doc["daily"]["weathercode"][i];
+        const char* dateStr = daily_time[i];
+        if (dateStr) {
+          int year, month, day;
+          sscanf(dateStr, "%d-%d-%d", &year, &month, &day);
+          forecast[i].dayOfWeek = getDayOfWeek(year, month, day);
+        } else {
+          forecast[i].dayOfWeek = -1; // Invalid
+        }
       }
-    }
+      currentWeather.isValid = true;
 
-#if DEBUG_SERIAL
-    if (!initialWeatherFetchDone) {
-      Serial.println("[INFO] Initial weather data received successfully.");
-      initialWeatherFetchDone = true;
+      #if DEBUG_SERIAL
+      if (!initialWeatherFetchDone) {
+        logSerial("[INFO] Initial weather data received successfully.");
+        initialWeatherFetchDone = true;
+      } else {
+        logSerial("[INFO] Weather data updated successfully.");
+      }
+      logSerial("  - Current Temp: %.1f°F", currentWeather.temperature);
+      #endif
     } else {
-      Serial.println("[INFO] Weather data updated successfully.");
+      #if DEBUG_SERIAL
+      logSerial("[WARN] Weather data response was missing 'current' or 'daily' objects.");
+      #endif
+      currentWeather.isValid = false;
     }
-    Serial.printf("  - Current Temp: %.1f°F\n", currentWeather.temperature);
-#endif
   } else {
-#if DEBUG_SERIAL
-    Serial.printf("[ERROR] Weather API request failed, error: %s\n", http.errorToString(httpCode).c_str());
-#endif
+    #if DEBUG_SERIAL
+    logSerial("[ERROR] Weather API request failed, error: %s", http.errorToString(httpCode).c_str());
+    #endif
     currentWeather.isValid = false;
   }
 
