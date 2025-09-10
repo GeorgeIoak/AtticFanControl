@@ -1,5 +1,6 @@
 #pragma once
 
+#include "types.h"
 #include <EEPROM.h>
 #include "hardware.h"
 
@@ -8,8 +9,9 @@
 #define RTC_RESET_MAGIC 0xDEADBEEF
 
 // Define a structure to hold all configurable settings
-struct Config {
+struct __attribute__((packed)) Config {
   uint32_t magic; // To check for valid data
+  FanMode fanMode;
   float fanOnTemp;
   float fanDeltaTemp;
   float fanHysteresis;
@@ -85,6 +87,7 @@ inline void loadConfig() {
     #endif
     // Load default values from hardware.h
     config.fanOnTemp = FAN_ON_TEMP_DEFAULT;
+    config.fanMode = FAN_MODE_DEFAULT;
     config.fanDeltaTemp = FAN_DELTA_TEMP_DEFAULT;
     config.fanHysteresis = FAN_HYSTERESIS_DEFAULT;
     config.preCoolTriggerTemp = PRECOOL_TRIGGER_TEMP_DEFAULT;
@@ -111,6 +114,7 @@ inline void loadConfig() {
     logDiagnostics("[WARN] Invalid config in EEPROM. Loading defaults.");
     // Load default values from hardware.h
     config.fanOnTemp = FAN_ON_TEMP_DEFAULT;
+    config.fanMode = FAN_MODE_DEFAULT;
     config.fanDeltaTemp = FAN_DELTA_TEMP_DEFAULT;
     config.fanHysteresis = FAN_HYSTERESIS_DEFAULT;
     config.preCoolTriggerTemp = PRECOOL_TRIGGER_TEMP_DEFAULT;
@@ -127,6 +131,15 @@ inline void loadConfig() {
   } else {
     #if DEBUG_SERIAL
     logSerial("[INFO] Configuration loaded from EEPROM.");
+    const char* modeStr;
+    switch(config.fanMode) {
+      case MANUAL_ON: modeStr = "MANUAL_ON"; break;
+      case MANUAL_OFF: modeStr = "MANUAL_OFF"; break;
+      case MANUAL_TIMED: modeStr = "MANUAL_TIMED"; break;
+      case AUTO: modeStr = "AUTO"; break;
+      default: modeStr = "INVALID"; // Handle corrupt/unknown values
+    }
+    logSerial("  - Fan Mode: %s (%d)", modeStr, config.fanMode); // Log the loaded mode
     logSerial("  - Fan On Temp: %.1f°F", config.fanOnTemp);
     logSerial("  - Fan Delta Temp: %.1f°F", config.fanDeltaTemp);
     logSerial("  - Fan Hysteresis: %.1f°F", config.fanHysteresis);

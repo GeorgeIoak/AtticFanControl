@@ -17,6 +17,7 @@
 #define MOCK_OUTDOOR_TEMP 88.0   // °F, used if DS18B20 not present
 
 // === Fan Control Logic ===
+#define FAN_MODE_DEFAULT     AUTO  // Default fan mode on first boot
 #define FAN_ON_TEMP_DEFAULT  90.0  // Default attic temp threshold (°F)
 #define FAN_DELTA_TEMP_DEFAULT 5.0 // Default temp difference to trigger fan (°F)
 #define FAN_HYSTERESIS_DEFAULT 2.0 // Default hysteresis (°F) to prevent rapid cycling
