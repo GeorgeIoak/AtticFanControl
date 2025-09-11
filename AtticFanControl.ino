@@ -422,6 +422,7 @@ void updateStatusLED() {
  * If the fan is running when the restart is due, it will wait until the fan turns off.
  */
 void handleDailyRestart() {
+  static unsigned long lastRestartDeferLog = 0;
   if (!config.dailyRestartEnabled) return;
 
   // 1. If a restart is pending, check if it's safe to proceed.
@@ -433,10 +434,12 @@ void handleDailyRestart() {
       #endif
       logAndRestart("[RESTART] Daily scheduled restart."); // It's safe to restart now.
     }
-    else { 
-      #if DEBUG_SERIAL
-      Serial.printf("[%lu] [INFO] Daily restart is pending, but fan is running. Deferring restart.\n", millis());
-      #endif
+    else {
+      // Log to serial, but only once per hour to avoid flooding.
+      if (millis() - lastRestartDeferLog > 3600000UL) { // 1 hour
+        lastRestartDeferLog = millis();
+        logSerial("[INFO] Daily restart is pending, but fan is running. Deferring restart until fan is off.");
+      }
     }
     // If fan is on, we do nothing and wait for the next loop cycle to check again.
     return;
@@ -447,10 +450,9 @@ void handleDailyRestart() {
   if (millis() - lastDailyRestartCheck > 3600000UL) { // 1 hour
     lastDailyRestartCheck = millis();
     if (millis() > 86400000UL) { // 24 hours in milliseconds
-      #if DEBUG_SERIAL
-      Serial.printf("[%lu] [INFO] 24-hour mark reached. A daily restart is now pending, will execute when fan is off.\n", millis());
-      #endif
       dailyRestartPending = true;
+      logSerial("[INFO] 24-hour mark reached. A daily restart is now pending.");
+      logDiagnostics("[INFO] Daily restart is pending, will execute when fan is off.");
       // The actual restart is now handled by the logic at the top of this function.
     }
   }
