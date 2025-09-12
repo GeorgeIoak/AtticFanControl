@@ -21,10 +21,9 @@
 #define USE_FS_WEBUI 0 // Set to 1 to use index.html from FS
 
 ESP8266WebServer server(80);
-DNSServer dnsServer;
+DNSServer dnsServer; 
 
 const unsigned long SENSOR_UPDATE_INTERVAL_MS = 5000; // ms
-FanMode fanMode = AUTO;
 
 // Non-blocking timer for sensor reads
 unsigned long lastSensorRead = 0;
@@ -53,6 +52,9 @@ float simulatedAtticHumidity = 50.0; // A reasonable default for humidity
 
 // === Timer State ===
 ManualTimerState manualTimer;
+
+// Global runtime fan mode, initialized from config in setup()
+FanMode fanMode;
 
 /**
  * @brief Prints a formatted, timestamped message to the Serial console.
@@ -123,12 +125,21 @@ void cancelManualTimer() {
 void setup() {
   Serial.begin(115200);
   loadConfig(); // Load settings from EEPROM
+  fanMode = config.fanMode; // Restore the last saved fan mode from config
   initSensors();
   initMqtt(); // Initialize MQTT client
   pinMode(FAN_RELAY_PIN, OUTPUT);
   pinMode(ONBOARD_LED_PIN, OUTPUT);
   analogWriteRange(255); // Set PWM range to 0-255 for LED breathing effect
-  setFanState(false); // Default OFF
+
+  // Set initial fan state based on the restored mode.
+  if (fanMode == MANUAL_ON) {
+    setFanState(true); // If we were manually on, stay on.
+  } else {
+    // For AUTO, MANUAL_OFF, or MANUAL_TIMED, the fan should start OFF.
+    // The AUTO logic will turn it on if conditions are met.
+    setFanState(false);
+  }
 
   // Mount the filesystem
   if (!LittleFS.begin()) {
@@ -411,6 +422,7 @@ void updateStatusLED() {
  * If the fan is running when the restart is due, it will wait until the fan turns off.
  */
 void handleDailyRestart() {
+  static unsigned long lastRestartDeferLog = 0;
   if (!config.dailyRestartEnabled) return;
 
   // 1. If a restart is pending, check if it's safe to proceed.
@@ -422,10 +434,12 @@ void handleDailyRestart() {
       #endif
       logAndRestart("[RESTART] Daily scheduled restart."); // It's safe to restart now.
     }
-    else { 
-      #if DEBUG_SERIAL
-      Serial.printf("[%lu] [INFO] Daily restart is pending, but fan is running. Deferring restart.\n", millis());
-      #endif
+    else {
+      // Log to serial, but only once per hour to avoid flooding.
+      if (millis() - lastRestartDeferLog > 3600000UL) { // 1 hour
+        lastRestartDeferLog = millis();
+        logSerial("[INFO] Daily restart is pending, but fan is running. Deferring restart until fan is off.");
+      }
     }
     // If fan is on, we do nothing and wait for the next loop cycle to check again.
     return;
@@ -436,10 +450,9 @@ void handleDailyRestart() {
   if (millis() - lastDailyRestartCheck > 3600000UL) { // 1 hour
     lastDailyRestartCheck = millis();
     if (millis() > 86400000UL) { // 24 hours in milliseconds
-      #if DEBUG_SERIAL
-      Serial.printf("[%lu] [INFO] 24-hour mark reached. A daily restart is now pending, will execute when fan is off.\n", millis());
-      #endif
       dailyRestartPending = true;
+      logSerial("[INFO] 24-hour mark reached. A daily restart is now pending.");
+      logDiagnostics("[INFO] Daily restart is pending, will execute when fan is off.");
       // The actual restart is now handled by the logic at the top of this function.
     }
   }
@@ -497,15 +510,20 @@ void loop() {
     float atticHumidity = readAtticHumidity();
     float outdoorTemp = readOutdoorTemp();
 
-    const char* modeStr;
+    const char* modeStr = "UNKNOWN";
     switch (fanMode) {
-      case MANUAL_ON:
-      case MANUAL_OFF:
-      case MANUAL_TIMED:
-        modeStr = "MANUAL";
-        break;
-      default:
+      case AUTO:
         modeStr = "AUTO";
+        break;
+      case MANUAL_ON:
+        modeStr = "MANUAL_ON";
+        break;
+      case MANUAL_OFF:
+        modeStr = "MANUAL_OFF";
+        break;
+      case MANUAL_TIMED:
+        modeStr = "MANUAL_TIMED";
+        break;
     }
     #if DEBUG_SERIAL
     Serial.printf("[%lu] Attic: %.1f°F, %.1f%% RH | Outdoor: %.1f°F | Mode: %s\n", millis(), atticTemp, atticHumidity, outdoorTemp, modeStr);

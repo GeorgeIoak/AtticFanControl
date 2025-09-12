@@ -100,6 +100,8 @@ inline void handleFan(ESP8266WebServer &server, FanMode &fanMode) {
       logDiagnostics("[ACTION] Fan turned ON manually via web UI.");
       cancelManualTimer();
       fanMode = MANUAL_ON;
+      config.fanMode = MANUAL_ON;
+      saveConfig();
       setFanState(true);
       server.send(200, "text/plain", "ON");
     } else if (state == "ping") {
@@ -108,11 +110,24 @@ inline void handleFan(ESP8266WebServer &server, FanMode &fanMode) {
       logDiagnostics("[ACTION] Mode changed to AUTO via web UI.");
       cancelManualTimer();
       fanMode = AUTO;
+      config.fanMode = AUTO;
+      saveConfig();
       server.send(200, "text/plain", "Mode set to AUTO");
+    } else if (state == "manual") {
+      logDiagnostics("[ACTION] Mode changed to MANUAL via web UI.");
+      cancelManualTimer();
+      // When switching to manual, preserve the current fan state
+      bool fanIsOn = digitalRead(FAN_RELAY_PIN) == HIGH;
+      fanMode = fanIsOn ? MANUAL_ON : MANUAL_OFF;
+      config.fanMode = fanMode; // Persist the specific manual mode
+      saveConfig();
+      server.send(200, "text/plain", "Mode set to MANUAL");
     } else if (state == "off") {
       logDiagnostics("[ACTION] Fan turned OFF manually via web UI.");
       cancelManualTimer();
       fanMode = MANUAL_OFF;
+      config.fanMode = MANUAL_OFF;
+      saveConfig();
       setFanState(false);
       server.send(200, "text/plain", "OFF");
     } else {

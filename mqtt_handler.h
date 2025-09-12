@@ -39,13 +39,17 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
     if (strcmp(topic, commandTopic) == 0) {
         cancelManualTimer();
+        // When controlled via switch, always go to a manual state
         if (strcmp(p, "ON") == 0) {
             fanMode = MANUAL_ON;
+            config.fanMode = MANUAL_ON;
             setFanState(true);
         } else {
             fanMode = MANUAL_OFF;
+            config.fanMode = MANUAL_OFF;
             setFanState(false);
         }
+        saveConfig();
     } else if (strcmp(topic, modeCommandTopic) == 0) {
         cancelManualTimer();
         if (strcmp(p, "AUTO") == 0) {
@@ -55,6 +59,9 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
             bool fanIsOn = digitalRead(FAN_RELAY_PIN) == HIGH;
             fanMode = fanIsOn ? MANUAL_ON : MANUAL_OFF;
         }
+        // Persist the new mode
+        config.fanMode = fanMode;
+        saveConfig();
     }
 }
 
