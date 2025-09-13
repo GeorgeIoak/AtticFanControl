@@ -81,32 +81,41 @@ const char EMBEDDED_WEBUI[] PROGMEM = R"EMB1(
     <div class="settings-container">
       <div class="settings-group">
         <h4 class="config-subheading">Core Automation</h4>
-        <div class="smart-pre-cool-grid">
-          <label for="fanOnTemp" title="The attic temperature at which the fan will consider turning on." class="spc-label">On Temp</label>
-          <label for="fanDeltaTemp" title="Fan only runs if attic is this much hotter than outside. Prevents pulling in hot air." class="spc-label">Delta Temp</label>
-          <label for="fanHysteresis" title="Prevents rapid on/off cycling. Fan turns off at (On Temp - Hysteresis)." class="spc-label">Hysteresis</label>
-          <div class="number-input-wrapper"><input type="number" id="fanOnTemp" step="0.5" value="90.0"></div>
-          <div class="number-input-wrapper"><input type="number" id="fanDeltaTemp" step="0.5" value="5.0"></div>
-          <div class="number-input-wrapper"><input type="number" id="fanHysteresis" step="0.5" value="2.0"></div>
-          <div class="spc-save-cell">
+        <div class="config-grid">
+          <div class="config-item">
+            <label for="fanOnTemp" title="The attic temperature at which the fan will consider turning on.">On Temp</label>
+            <div class="number-input-wrapper"><input type="number" id="fanOnTemp" step="0.5" value="90.0"></div>
+          </div>
+          <div class="config-item">
+            <label for="fanDeltaTemp" title="Fan only runs if attic is this much hotter than outside. Prevents pulling in hot air.">Delta Temp</label>
+            <div class="number-input-wrapper"><input type="number" id="fanDeltaTemp" step="0.5" value="5.0"></div>
+          </div>
+          <div class="config-item">
+            <label for="fanHysteresis" title="Prevents rapid on/off cycling. Fan turns off at (On Temp - Hysteresis).">Hysteresis</label>
+            <div class="number-input-wrapper"><input type="number" id="fanHysteresis" step="0.5" value="2.0"></div>
+          </div>
+          <div class="save-cell">
             <button class="section-save-btn" onclick="saveCoreAutomation()">💾 Save Core Automation</button>
           </div>
         </div>
       </div>
       <div class="settings-group">
         <h4 class="config-subheading">Smart Pre-Cooling</h4>
-        <div class="smart-pre-cool-grid">
-          <label for="preCoolTriggerTemp" title="If forecast high is at or above this, pre-cooling activates." class="spc-label">Pre-Cool Trigger</label>
-          <label for="preCoolTempOffset" title="Lowers the 'On Temp' by this amount when pre-cooling is active." class="spc-label">Pre-Cool Offset</label>
-          <label for="historyLogInterval" title="How often to log sensor history (in minutes)." class="spc-label">History Log Interval</label>
-          <div class="number-input-wrapper"><input type="number" id="preCoolTriggerTemp" step="0.5" value="90.0"></div>
-          <div class="number-input-wrapper"><input type="number" id="preCoolTempOffset" step="0.5" value="5.0"></div>
-          <div class="number-input-wrapper"><input type="number" id="historyLogInterval" min="1" max="1440" step="1" required value="5"></div>
-          <div class="spc-save-cell">
-            <button class="section-save-btn" onclick="saveSmartPreCooling()">💾 Save Smart Pre-Cooling</button>
+        <div class="config-grid">
+          <div class="config-item">
+            <label for="preCoolTriggerTemp" title="If forecast high is at or above this, pre-cooling activates.">Pre-Cool Trigger</label>
+            <div class="number-input-wrapper"><input type="number" id="preCoolTriggerTemp" step="0.5" value="90.0"></div>
           </div>
-          <div class="spc-help-cell">
-            <small>Default: 5 min. Range: 1—1440 (24h).</small>
+          <div class="config-item">
+            <label for="preCoolTempOffset" title="Lowers the 'On Temp' by this amount when pre-cooling is active.">Pre-Cool Offset</label>
+            <div class="number-input-wrapper"><input type="number" id="preCoolTempOffset" step="0.5" value="5.0"></div>
+          </div>
+          <div class="config-item">
+            <label for="historyLogInterval" title="How often to log sensor history (in minutes).">History Log Interval</label>
+            <div class="number-input-wrapper"><input type="number" id="historyLogInterval" min="1" max="1440" step="1" required value="5"></div>
+          </div>
+          <div class="save-cell">
+            <button class="section-save-btn" onclick="saveSmartPreCooling()">💾 Save Smart Pre-Cooling</button>
           </div>
         </div>
       </div>
