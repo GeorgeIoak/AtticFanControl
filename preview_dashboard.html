@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Indoor Sensors Dashboard - Preview</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background-color: #f0f0f0; 
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+        }
+        .header { 
+            text-align: center; 
+            border-bottom: 2px solid #333; 
+            padding-bottom: 15px; 
+            margin-bottom: 20px; 
+        }
+        .stats { 
+            display: flex; 
+            justify-content: space-around; 
+            margin-bottom: 30px; 
+            flex-wrap: wrap; 
+        }
+        .stat-card { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            color: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+            text-align: center; 
+            min-width: 150px; 
+            margin: 10px; 
+        }
+        .stat-number { 
+            font-size: 2em; 
+            font-weight: bold; 
+            margin-bottom: 5px; 
+        }
+        .stat-label { 
+            font-size: 0.9em; 
+            opacity: 0.9; 
+        }
+        .sensor-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+            gap: 20px; 
+            margin-bottom: 20px; 
+        }
+        .sensor-card { 
+            border: 1px solid #ddd; 
+            border-radius: 8px; 
+            padding: 15px; 
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); 
+        }
+        .sensor-card.offline { 
+            opacity: 0.6; 
+            background: linear-gradient(135deg, #ffefef 0%, #ffc3c3 100%); 
+        }
+        .sensor-name { 
+            font-weight: bold; 
+            font-size: 1.1em; 
+            margin-bottom: 10px; 
+            color: #333; 
+        }
+        .sensor-data { 
+            display: flex; 
+            justify-content: space-between; 
+            margin-bottom: 8px; 
+        }
+        .sensor-value { 
+            font-size: 1.4em; 
+            font-weight: bold; 
+        }
+        .temp { color: #e74c3c; }
+        .humidity { color: #3498db; }
+        .last-update { 
+            font-size: 0.85em; 
+            color: #666; 
+            margin-top: 10px; 
+        }
+        .remove-btn { 
+            background: #e74c3c; 
+            color: white; 
+            border: none; 
+            padding: 5px 10px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            float: right; 
+            margin-top: -5px; 
+        }
+        .remove-btn:hover { 
+            background: #c0392b; 
+        }
+        .refresh-btn { 
+            background: #3498db; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            margin: 10px; 
+        }
+        .refresh-btn:hover { 
+            background: #2980b9; 
+        }
+        .controls { 
+            text-align: center; 
+            margin-bottom: 20px; 
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏠 Indoor Sensors Dashboard</h1>
+            <p>Real-time temperature and humidity monitoring</p>
+        </div>
+        
+        <div class="controls">
+            <button class="refresh-btn">🔄 Refresh</button>
+            <button class="refresh-btn">🏠 Main Controller</button>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number">3</div>
+                <div class="stat-label">Active Sensors</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">72.2°F</div>
+                <div class="stat-label">Avg Temperature</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">45.7%</div>
+                <div class="stat-label">Avg Humidity</div>
+            </div>
+        </div>
+        
+        <div class="sensor-grid">
+            <div class="sensor-card">
+                <button class="remove-btn">×</button>
+                <div class="sensor-name">Living Room</div>
+                <div class="sensor-data">
+                    <span>Temperature:</span>
+                    <span class="sensor-value temp">72.5°F</span>
+                </div>
+                <div class="sensor-data">
+                    <span>Humidity:</span>
+                    <span class="sensor-value humidity">45.2%</span>
+                </div>
+                <div class="sensor-data">
+                    <span>IP Address:</span>
+                    <span>192.168.1.101</span>
+                </div>
+                <div class="last-update">
+                    Last update: 15 seconds ago
+                </div>
+            </div>
+            
+            <div class="sensor-card">
+                <button class="remove-btn">×</button>
+                <div class="sensor-name">Master Bedroom</div>
+                <div class="sensor-data">
+                    <span>Temperature:</span>
+                    <span class="sensor-value temp">70.0°F</span>
+                </div>
+                <div class="sensor-data">
+                    <span>Humidity:</span>
+                    <span class="sensor-value humidity">50.0%</span>
+                </div>
+                <div class="sensor-data">
+                    <span>IP Address:</span>
+                    <span>192.168.1.102</span>
+                </div>
+                <div class="last-update">
+                    Last update: 23 seconds ago
+                </div>
+            </div>
+            
+            <div class="sensor-card">
+                <button class="remove-btn">×</button>
+                <div class="sensor-name">Kitchen</div>
+                <div class="sensor-data">
+                    <span>Temperature:</span>
+                    <span class="sensor-value temp">74.0°F</span>
+                </div>
+                <div class="sensor-data">
+                    <span>Humidity:</span>
+                    <span class="sensor-value humidity">42.0%</span>
+                </div>
+                <div class="sensor-data">
+                    <span>IP Address:</span>
+                    <span>192.168.1.103</span>
+                </div>
+                <div class="last-update">
+                    Last update: 8 seconds ago
+                </div>
+            </div>
+            
+            <div class="sensor-card offline">
+                <button class="remove-btn">×</button>
+                <div class="sensor-name">Garage</div>
+                <div class="sensor-data">
+                    <span>Temperature:</span>
+                    <span class="sensor-value temp">68.5°F</span>
+                </div>
+                <div class="sensor-data">
+                    <span>Humidity:</span>
+                    <span class="sensor-value humidity">55.0%</span>
+                </div>
+                <div class="sensor-data">
+                    <span>IP Address:</span>
+                    <span>192.168.1.104</span>
+                </div>
+                <div class="last-update">
+                    ⚠️ OFFLINE - Last update: 8 minutes ago
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
