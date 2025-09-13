@@ -22,3 +22,20 @@ struct ManualTimerState {
   unsigned long timerEndTime = 0;
   PostTimerAction postAction = REVERT_TO_AUTO;
 };
+
+// Indoor sensor data structure
+struct IndoorSensorData {
+  String sensorId;        // Unique identifier for the sensor
+  String name;            // Human-readable name
+  float temperature;      // Temperature in Fahrenheit
+  float humidity;         // Relative humidity percentage
+  unsigned long lastUpdate; // Timestamp of last update (millis())
+  String ipAddress;       // IP address of the sensor device
+  bool isActive;          // Whether the sensor is currently active
+};
+
+// Maximum number of indoor sensors supported
+#define MAX_INDOOR_SENSORS 10
+
+// Indoor sensor data retention period (30 minutes)
+#define INDOOR_SENSOR_TIMEOUT_MS 1800000UL

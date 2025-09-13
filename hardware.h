@@ -29,6 +29,7 @@
 #define HISTORY_LOG_INTERVAL_DEFAULT 300000UL // 5 minutes in ms
 #define MQTT_ENABLED_DEFAULT false // Whether MQTT is enabled by default
 #define MQTT_DISCOVERY_ENABLED_DEFAULT false // Whether to publish Home Assistant discovery topics
+#define INDOOR_SENSORS_ENABLED_DEFAULT true // Whether indoor sensors are enabled by default
 #define DAILY_RESTART_ENABLED_DEFAULT true // Whether the daily restart is enabled by default
 
 // === OTA Update Port (optional override) ===

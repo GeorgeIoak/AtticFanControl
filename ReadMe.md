@@ -260,8 +260,73 @@ The controller exposes several API endpoints for programmatic control and integr
 
 ---
 
+## 🏠 Indoor Sensor Integration
+
+This version adds support for multiple ESP8266-based indoor sensors that can report temperature and humidity data to the main attic fan controller via HTTP POST requests.
+
+### Features
+
+- **Multiple Sensor Support**: Register up to 10 indoor sensors with unique identifiers
+- **Automatic Registration**: Sensors automatically register themselves when they start reporting data
+- **Data Validation**: Temperature and humidity values are validated for reasonable ranges
+- **Timeout Management**: Inactive sensors are automatically removed after 30 minutes
+- **REST API**: Full API for sensor management and data retrieval
+- **Web UI Integration**: Indoor sensor data displayed in the main controller's status
+- **MQTT Support**: Indoor sensor data can be published to MQTT for Home Assistant integration
+
+### API Endpoints
+
+- **`POST /indoor_sensors/data`**: Submit sensor data
+  - Required JSON fields: `sensorId`, `name`, `temperature` (°F), `humidity` (%)
+  - Example: `{"sensorId": "sensor1", "name": "Living Room", "temperature": 72.5, "humidity": 45.2}`
+
+- **`GET /indoor_sensors`**: Get all registered sensors and their data
+  - Returns sensor list, count, and average temperature/humidity
+
+- **`DELETE /indoor_sensors/{sensorId}`**: Remove a specific sensor
+
+### Indoor Sensor Setup
+
+1. **Hardware**: Use an ESP8266 board (NodeMCU, Wemos D1 Mini) with:
+   - SHT21, SHT20, or BME280 temperature/humidity sensor
+   - I2C connections (SDA/SCL pins)
+
+2. **Software**: Use the provided `IndoorSensorClient.ino` sketch:
+   - Update WiFi credentials
+   - Set the main controller's IP address
+   - Configure unique sensor ID and name
+   - Upload to ESP8266
+
+3. **Configuration**: 
+   - Sensors automatically register when they start sending data
+   - No manual configuration needed on the main controller
+   - Enable/disable indoor sensors in the main controller's config
+
+### Example Indoor Sensor Configuration
+
+```cpp
+// In IndoorSensorClient.ino
+const char* ATTIC_FAN_IP = "192.168.1.100";  // Your controller's IP
+const String SENSOR_ID = "bedroom_01";        // Unique identifier
+const String SENSOR_NAME = "Master Bedroom";  // Display name
+const unsigned long POST_INTERVAL = 30000;    // Send every 30 seconds
+```
+
+### Integration with Fan Logic
+
+While the current implementation focuses on data collection and display, indoor sensor data can be used for future enhancements like:
+- Whole-house fan control based on indoor/outdoor temperature differential
+- Humidity-based ventilation control
+- Zone-specific climate monitoring
+- Smart scheduling based on occupancy patterns
+
+---
+
 🧠 Potential Future Plans
-- Add an indoor temperature sensor for more advanced climate control logic (e.g., whole-house fan).
+- ~~Add an indoor temperature sensor for more advanced climate control logic (e.g., whole-house fan).~~ ✅ **Implemented**
+- Advanced fan control logic using indoor sensor data
+- Sensor discovery and auto-configuration protocol
+- Mobile app for sensor management
 
 - Always test with low-voltage loads before switching high-power fans.
 - Use proper isolation and protection when working with AC
