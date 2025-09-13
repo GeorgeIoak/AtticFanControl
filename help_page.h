@@ -7,6 +7,7 @@
 #define WEBUI_EMIT_STREAM_HELPER 1
 #endif
 
+#undef F
 const char HELP_PAGE[] PROGMEM = R"EMB1(
 <!DOCTYPE html>
 <html>
@@ -150,13 +151,13 @@ const char HELP_PAGE[] PROGMEM = R"EMB1(
     </div>
   </div>
 </body>
-</html>
-)EMB1";
+</html>)EMB1";
+const size_t HELP_PAGE_LEN = sizeof(HELP_PAGE) - 1;
 
 #if WEBUI_EMIT_STREAM_HELPER
 // NOTE: Assumes you have a global 'ESP8266WebServer server(80);'
 // If your instance is named differently, set WEBUI_EMIT_STREAM_HELPER=0
-// and paste a custom handler in your route file.
+// and paste a custom handler in your route file. 
 #include <ESP8266WebServer.h>                                                   
 static void handleHelpPage() {
   extern ESP8266WebServer server;                                              
@@ -167,3 +168,4 @@ static void handleHelpPage() {
 }
 #endif
 
+#define F(string_literal) (FPSTR(PSTR(string_literal)))

@@ -1,0 +1,348 @@
+#pragma once
+#include <pgmspace.h>
+
+// Auto-generated from atticfan.css. Do not edit by hand.
+// To define the chunked handler automatically, keep WEBUI_EMIT_STREAM_HELPER=1
+#ifndef WEBUI_EMIT_STREAM_HELPER
+#define WEBUI_EMIT_STREAM_HELPER 1
+#endif
+
+#undef F
+const char ATTICFAN_CSS[] PROGMEM = R"EMB1(
+/* Add vertical spacing between ON/OFF and SET TIMER buttons in Mode Control */
+#mode-control-box > div:last-child button + button + button {
+  margin-top: 0.75rem;
+}
+/* Danger row for System & Maintenance section */
+.danger-row {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  justify-content: center;
+}
+.danger-row .btn-danger {
+  min-width: 160px;
+}
+/* Style for help-link (the (?), shown as superscript) */
+.help-link {
+  font-size: 0.7em;
+  vertical-align: super;
+  text-decoration: none;
+  margin-left: 2px;
+  color: #2980b9;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.help-link:hover, .help-link:focus {
+  color: #e67e22;
+  text-decoration: underline;
+}
+:root{
+  --primary-blue:#2196F3;--primary-blue-dark:#1976D2;--primary-teal:#21CBF3;
+  --danger-red:#dc3545;--success-green:#28a745;--warning-orange:#fd7e14;
+  --text-muted:#6c757d;--border-light:#e0e0e0;--bg-card:#fff;
+  --shadow-sm:0 2px 4px rgba(0,0,0,.1);--shadow-md:0 4px 8px rgba(0,0,0,.15)
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  margin: 0 auto;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  max-width: 900px;
+  padding: 0 16px;
+  min-height: 100vh;
+}
+
+/* ---------- Headings ---------- */
+h1{margin:20px 0;color:#2c3e50;font-weight:300;font-size:clamp(1.5rem,4vw,2.5rem);text-align:center}
+h2 {
+  margin: 18px 0 12px;
+  color: #2c3e50;
+  font-weight: 600;
+  font-size: 1.3rem;
+  text-align: center;
+}
+
+/* ---------- Layout ---------- */
+.page-container{
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 0 2vw;
+  width: 100%;
+}
+
+/* Optional utility container for future use */
+.container {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 0 2vw;
+  width: 100%;
+}
+.top-layout-grid{display:grid;grid-template-columns:250px minmax(0, 1fr);gap:20px;margin-bottom:20px;align-items:stretch}
+.sensor-column{display:flex;flex-direction:column;gap:20px;justify-content:space-between}
+.control-column{display:flex}
+
+/* fill the right column card */
+#mode-control-box{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;border-radius:16px;padding:24px 28px;margin:0;width:100%;display:flex;flex-direction:column;justify-content:center;box-shadow:0 8px 25px rgba(102,126,234,.3);border:1px solid rgba(255,255,255,.25);text-align:center}
+#mode-control-box h3{color:#fff;margin:0 0 20px}
+
+/* ---------- Cards & Sections ---------- */
+.content-section{
+  margin: 20px auto;
+  padding: 20px;
+  background: linear-gradient(135deg, #eaf0fb 0%, #f5eafd 100%);
+  border-radius: 12px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-light);
+  text-align: center;
+}
+
+/* Help page specific tweaks */
+.help-section h2 {
+  /* Help page sections remain left-aligned */
+  text-align: left;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: #2c3e50;
+}
+.help-section dl dt {
+  font-weight: 600;
+  font-size: 1.08rem;
+  margin-top: 10px;
+  color: #2980b9;
+}
+.help-section dl dd {
+/* Restore left alignment for help-section content only */
+  margin-left: 22px;
+  margin-bottom: 10px;
+  color: #333;
+}
+.help-section ul {
+  margin-left: 22px;
+  color: #333;
+}
+.help-section code {
+  background-color: #e9ecef;
+  padding: 2px 5px;
+  border-radius: 4px;
+  word-wrap: break-word;
+  font-size: 0.98em;
+}
+.back-link {
+  display: inline-block;
+  margin-bottom: 20px;
+  color: #2980b9;
+  text-decoration: none;
+  font-size: 1em;
+}
+.back-link:hover {
+  text-decoration: underline;
+}
+}
+.settings-container{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;margin-bottom:20px}
+.settings-group{
+  background: linear-gradient(135deg, #f3f7fd 0%, #f8f6fb 100%);
+  border:1px solid var(--border-light);
+  border-radius:12px;
+  padding:20px;
+  box-shadow:var(--shadow-sm);
+}
+.config-subheading{margin:0 0 15px;text-align:center;color:#2c3e50;font-weight:500;font-size:1.1rem}
+.unit-note{font-size:.9rem;color:var(--text-muted);margin:-5px 0 15px;font-style:italic;text-align:center;display:block}
+
+/* ---------- Sensors ---------- */
+.sensor-grid{display:flex;justify-content:center;gap:15px;margin-bottom:20px;flex-wrap:wrap}
+.sensor-item{
+  padding:15px;
+  border:2px solid var(--border-light);
+  border-radius:var(--radius-md);
+  min-width:120px;
+  background: linear-gradient(135deg, #f4f7fb 0%, #f7f4fb 100%);
+  box-shadow:var(--shadow-sm);
+  transition:transform .2s ease, box-shadow .2s ease;
+  text-align:center;
+}
+.sensor-item:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.1)}
+.sensor-item strong{color:#2c3e50;display:block;margin-bottom:8px;font-size:.9rem;text-transform:uppercase;letter-spacing:.5px}
+.sensor-value{font-size:1.2rem;font-weight:600;color:var(--primary-blue)}
+
+/* ---------- Switch ---------- */
+.switch{position:relative;display:inline-block;width:60px;height:34px}
+.switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;cursor:pointer;inset:0;background:linear-gradient(45deg,#bdc3c7,#95a5a6);transition:.3s;border-radius:34px;box-shadow:inset 0 2px 4px rgba(0,0,0,.1)}
+.slider:before{content:"";position:absolute;height:26px;width:26px;left:4px;bottom:4px;background:linear-gradient(45deg,#fff,#f8f9fa);transition:.3s;border-radius:50%;box-shadow:0 2px 4px rgba(0,0,0,.2)}
+input:checked+.slider{background:linear-gradient(45deg,var(--primary-blue),var(--primary-teal))}
+input:checked+.slider:before{transform:translateX(26px)}
+
+/* ---------- Buttons ---------- */
+.section-save-btn{padding:12px 24px;background:linear-gradient(135deg,var(--primary-blue),var(--primary-teal));color:#fff;border:0;border-radius:8px;box-shadow:0 4px 15px rgba(33,150,243,.3);font-size:.95rem;font-weight:600;cursor:pointer;transition:.3s;text-decoration:none;display:inline-block;text-transform:uppercase;letter-spacing:.5px}
+.section-save-btn:hover{background:linear-gradient(135deg,var(--primary-blue-dark),#00BCD4);box-shadow:0 6px 20px rgba(33,150,243,.4);transform:translateY(-2px)}
+.section-save-btn:active{transform:translateY(0)}
+.section-save-btn:disabled{background:linear-gradient(135deg,#95a5a6,#7f8c8d);box-shadow:none;cursor:not-allowed;opacity:.6}
+.section-save-btn.btn-danger{background:linear-gradient(135deg,var(--danger-red),#c82333);box-shadow:0 4px 15px rgba(220,53,69,.3)}
+.section-save-btn.btn-danger:hover{background:linear-gradient(135deg,#c82333,#bd2130);box-shadow:0 6px 20px rgba(220,53,69,.4)}
+
+.mode-buttons-container{display:flex;justify-content:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.fan-status-container{display:flex;justify-content:center;align-items:center;gap:20px;margin:15px 0;flex-wrap:wrap}
+.fan-text-container{text-align:left}
+
+/* ---------- Icons & Animations ---------- */
+#fan-icon-container{width:70px;height:70px;padding:10px;background:rgba(255,255,255,.2);border-radius:50%;backdrop-filter:blur(10px)}
+.fan-icon{width:100%;height:100%;transition:.3s}
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.fan-icon.spinning{animation:spin 1s linear infinite}
+
+/* ---------- Status Indicator (kept hidden to match current UI) ---------- */
+.status-indicator{display:none!important;width:12px;height:12px;border-radius:50%;margin-right:8px}
+.status-indicator.online{background:var(--success-green);box-shadow:0 0 8px rgba(40,167,69,.5)}
+.status-indicator.offline{background:var(--text-muted)}
+
+/* ---------- Grids ---------- */
+.config-grid{display:flex;flex-wrap:wrap;justify-content:center;gap:15px;align-items:stretch}
+.config-item{
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-between;
+  flex: 1;
+  min-width: 120px;
+  padding: 15px;
+  background: linear-gradient(145deg,#fff,#f8f9fa);
+  border-radius: 8px;
+  border: 1px solid var(--border-light)
+}
+.config-item label:first-child {
+  margin-bottom: 10px;
+}
+.config-item .switch {
+  align-self: flex-end;
+  margin-top: auto;
+  margin-bottom: 8px;
+}
+
+/* Ensure the switch is always centered vertically in config-item */
+.config-item .switch {
+  align-self: center;
+  margin-top: 8px;
+}
+.number-input-wrapper{display:flex;align-items:center;justify-content:center;width:100%}
+.number-input-wrapper input{text-align:center;font-size:1.1rem;height:44px;width:100%;max-width:120px;border:2px solid var(--border-light);border-radius:8px;transition:.2s;background:#fff;-moz-appearance:textfield}
+.number-input-wrapper input:focus{outline:none;border-color:var(--primary-blue);box-shadow:0 0 0 3px rgba(33,150,243,.1)}
+
+.smart-pre-cool-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;align-items:start}
+.smart-pre-cool-grid .spc-label{text-align:center;font-weight:500;padding:10px;background:linear-gradient(145deg,#f8f9fa,#e9ecef);border-radius:6px;border:1px solid var(--border-light);height:76px;display:flex;align-items:center;justify-content:center;line-height:1.2}
+.smart-pre-cool-grid .spc-save-cell{grid-column:1/3;display:flex;justify-content:center;padding-top:14px}
+.smart-pre-cool-grid .spc-help-cell{grid-column:3;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding-top:14px}
+
+/* ---------- Range Inputs ---------- */
+input[type=range]{width:100%;height:6px;border-radius:3px;background:var(--border-light);outline:none;-webkit-appearance:none}
+input[type=range]::-webkit-slider-thumb{appearance:none;width:20px;height:20px;border-radius:50%;background:var(--primary-blue);cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--primary-blue);cursor:pointer;border:0;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+
+/* ---------- Chart ---------- */
+.chart-container{background:#fff;border-radius:var(--radius-lg);padding:20px;margin:20px auto;box-shadow:var(--shadow-sm);border:1px solid var(--border-light);max-width:900px}
+#historyChart{width:100%!important;height:250px!important}
+#historyChartMsg{color:#888;font-size:.95em;margin-top:8px}
+
+/* ---------- Toast ---------- */
+.toast{visibility:hidden;min-width:300px;background:linear-gradient(135deg,#2c3e50,#34495e);color:#fff;text-align:center;border-radius:8px;padding:16px 20px;position:fixed;z-index:1001;left:50%;transform:translateX(-50%);bottom:30px;box-shadow:0 8px 25px rgba(0,0,0,.3);font-weight:500}
+.toast.show{visibility:visible;animation:toastSlideUp .3s ease-out}
+@keyframes toastSlideUp{from{transform:translateX(-50%) translateY(100%);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
+
+/* ---------- Modal (Timer) ---------- */
+.modal{display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.5);backdrop-filter:blur(5px)}
+.modal-content{background:#fff;margin:10% auto;padding:30px;border-radius:16px;width:90%;max-width:450px;box-shadow:0 20px 40px rgba(0,0,0,.3);animation:modalSlideIn .3s ease-out}
+@keyframes modalSlideIn{from{transform:translateY(-50px);opacity:0}to{transform:translateY(0);opacity:1}}
+.close-btn{color:#aaa;float:right;font-size:28px;font-weight:700;cursor:pointer;transition:color .2s}
+.close-btn:hover{color:var(--danger-red)}
+.modal-content h3 { text-align: center; }
+#timerStatus{font-size:.95rem;color:var(--warning-orange);font-weight:600;margin-top:8px;display:none;padding:8px;background:rgba(253,126,20,.1);border-radius:6px;border:1px solid rgba(253,126,20,.2)}
+
+/* ---------- System Controls ---------- */
+.system-controls{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:15px}
+
+/* ---------- Test Panel (unified; replaces duplicated blocks) ---------- */
+#test-panel .config-item label{display:block;margin-bottom:12px}
+#test-panel .config-item label { padding-bottom: 15px; }
+#test-panel .config-item label+input[type=range]{display:block;margin-top:14px}
+#test-panel .config-item{margin-bottom:8px}
+#test-panel .config-grid{display:grid;grid-template-columns:1fr 1fr;column-gap:28px;row-gap:16px}
+.test-panel-actions { text-align: center; margin-top: 15px; }
+.modal .timer-options { margin-top: 15px; }
+.modal .timer-options select { padding: 5px; }
+.modal .timer-actions { margin-top: 20px; }
+
+/* ---------- Footer ---------- */
+.app-footer { margin-top: 2rem; padding: 0.75rem 0; text-align: center; opacity: 0.8; }
+
+
+/* ---------- Loading ---------- */
+.loading{opacity:.6;pointer-events:none;position:relative}
+.loading:after{content:'';position:absolute;top:50%;left:50%;width:20px;height:20px;margin:-10px 0 0 -10px;border:2px solid var(--border-light);border-top:2px solid var(--primary-blue);border-radius:50%;animation:spin 1s linear infinite}
+
+/* ---------- Weather ---------- */
+.weather-forecast{display:flex;justify-content:center;gap:15px;margin-top:15px;flex-wrap:wrap}
+.forecast-day{background:linear-gradient(145deg,#fff,#f8f9fa);padding:12px;border-radius:8px;border:1px solid var(--border-light);min-width:80px;transition:transform .2s}
+.forecast-day:hover{transform:translateY(-2px)}
+
+/* ---------- Responsive ---------- */
+@media (max-width:900px){#historyChart{height:200px!important}}
+@media (max-width:800px){.top-layout-grid{grid-template-columns:1fr}.fan-status-container{flex-direction:column;gap:15px}.settings-container{grid-template-columns:1fr}}
+@media (max-width:700px){.smart-pre-cool-grid .spc-label{height:88px}}
+@media (max-width:680px){#test-panel .config-grid{grid-template-columns:1fr;row-gap:24px}#test-panel .config-item{margin-bottom:16px}}
+@media (max-width:480px){.smart-pre-cool-grid{grid-template-columns:1fr;gap:10px}.smart-pre-cool-grid .spc-save-cell{grid-column:1}.smart-pre-cool-grid .spc-help-cell{grid-column:1}.section-save-btn{padding:10px 16px;font-size:.9rem}h1{font-size:1.5rem}}
+
+:root { --radius-lg:16px; --radius-md:12px }
+
+h1{letter-spacing:.5px}
+
+/* #mode-control-box h3{
+  display:flex;align-items:center;gap:8px;
+  font-weight:600;letter-spacing:.3px;margin-bottom:18px;
+} */
+#mode-control-box a{
+  color:#fff;text-decoration:underline;text-underline-offset:2px;opacity:.9
+}
+#mode-control-box a:hover{opacity:1}
+
+.mode-buttons-container .section-save-btn{min-width:110px}
+.section-save-btn.is-active,
+.section-save-btn[aria-pressed="true"]{
+  filter:none;opacity:1;
+  background:linear-gradient(135deg,#00BCD4,#21CBF3)
+}
+.section-save-btn:disabled{opacity:.5}
+
+.weather-forecast{gap:18px}
+.forecast-day{min-width:110px;text-align:center;padding:14px 16px}
+.forecast-day .temp-range{font-weight:600}
+
+a{color:#1976D2}
+.content-section h2 a{color:inherit}
+
+@media (max-width:900px){
+  #mode-control-box{padding:20px}
+}
+)EMB1";
+const size_t ATTICFAN_CSS_LEN = sizeof(ATTICFAN_CSS) - 1;
+
+#if WEBUI_EMIT_STREAM_HELPER
+// NOTE: Assumes you have a global 'ESP8266WebServer server(80);'
+// If your instance is named differently, set WEBUI_EMIT_STREAM_HELPER=0
+// and paste a custom handler in your route file. 
+#include <ESP8266WebServer.h>                                                   
+static void handleAtticfanCss() {
+  extern ESP8266WebServer server;                                              
+  server.sendHeader("Connection", "close");                                   
+  server.send_P(200, "text/css",                                               
+                ATTICFAN_CSS,
+                sizeof(ATTICFAN_CSS) - 1);
+}
+#endif
+
+#define F(string_literal) (FPSTR(PSTR(string_literal)))

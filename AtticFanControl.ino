@@ -123,6 +123,14 @@ void cancelManualTimer() {
 }
 
 void setup() {
+  // Serve embedded static assets when not using FS web UI
+#if !USE_FS_WEBUI
+  server.on("/atticfan.js", [](){ handleAtticfanJs(); });
+  server.on("/atticfan.css", [](){ handleAtticfanCss(); });
+  server.on("/favicon.ico", [](){ handleFaviconIco(); });
+  server.on("/favicon.png", [](){ handleFaviconPng(); });
+  server.on("/help.html", [](){ handleHelp(server); });
+#endif
   Serial.begin(115200);
   loadConfig(); // Load settings from EEPROM
   fanMode = config.fanMode; // Restore the last saved fan mode from config

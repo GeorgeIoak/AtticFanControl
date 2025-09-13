@@ -26,7 +26,27 @@ UI_FILES_TO_MANAGE = {
     "data/help.html": {
         "dest": "help_page.h",
         "var": "HELP_PAGE",
-        "func": "handleHelpPage" # This function won't be used, but we generate it for consistency
+        "func": "handleHelpPage"
+    },
+    "data/atticfan.js": {
+        "dest": "atticfan_js.h",
+        "var": "ATTICFAN_JS",
+        "func": "handleAtticfanJs"
+    },
+    "data/atticfan.css": {
+        "dest": "atticfan_css.h",
+        "var": "ATTICFAN_CSS",
+        "func": "handleAtticfanCss"
+    },
+    "data/favicon.ico": {
+        "dest": "favicon_ico.h",
+        "var": "FAVICON_ICO",
+        "func": "handleFaviconIco"
+    },
+    "data/favicon.png": {
+        "dest": "favicon_png.h",
+        "var": "FAVICON_PNG",
+        "func": "handleFaviconPng"
     }
 }
 POLL_INTERVAL_S = 1.0  # How often to check for file changes in watch mode.
