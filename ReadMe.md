@@ -77,7 +77,9 @@ AtticFanControl/                  # Main project folder
 ├── secrets.h                     # Wi-Fi credentials (excluded from repo)
 ├── sensors.h                     # Sensor logic
 ├── hardware.h                    # Hardware config and flags
-├── IndoorSensorClient/           # Separate sketch for the indoor sensor node
+├── IndoorSensorClient/           # --- SEPARATE SKETCH for the Indoor Sensor Node ---
+│   ├── secrets_example.h         # Example credentials file
+│   ├── secrets.h                 # WiFi credentials for the sensor node (gitignored)
 │   └── IndoorSensorClient.ino    # Code to be flashed onto the indoor sensor ESP8266
 ├── data/                     # Filesystem folder for FS upload
 │   └── index.html            # Place your custom UI here
@@ -300,10 +302,11 @@ This version adds support for multiple ESP8266-based indoor sensors that can rep
    - I2C connections (SDA/SCL pins)
 
 2. **Software**: Open the `IndoorSensorClient/IndoorSensorClient.ino` sketch in the Arduino IDE. This is a separate sketch from the main controller.
-   - Update WiFi credentials
-   - Set the main controller's IP address
-   - Configure unique sensor ID and name
-   - Upload to ESP8266
+   - In the `IndoorSensorClient` folder, copy `secrets_example.h` to a new file named `secrets.h` and add your WiFi `ssid` and `password`.
+   - In `IndoorSensorClient.ino`, configure a unique `SENSOR_ID` and `SENSOR_NAME` for the new device.
+   - The sensor will automatically try to find the main controller on your network using its mDNS name (`AtticFan.local`).
+   - (Optional) If your network has trouble with mDNS, you can update the `FALLBACK_CONTROLLER_IP` in the sketch.
+   - Upload to the ESP8266 board for your indoor sensor.
 
 3. **Configuration**: 
    - Sensors automatically register when they start sending data
@@ -313,8 +316,7 @@ This version adds support for multiple ESP8266-based indoor sensors that can rep
 ### Example Indoor Sensor Configuration
 
 ```cpp
-// In IndoorSensorClient.ino
-const char* ATTIC_FAN_IP = "192.168.1.100";  // Your controller's IP
+// In IndoorSensorClient.ino - the IP is now found automatically!
 const String SENSOR_ID = "bedroom_01";        // Unique identifier
 const String SENSOR_NAME = "Master Bedroom";  // Display name
 const unsigned long POST_INTERVAL = 30000;    // Send every 30 seconds

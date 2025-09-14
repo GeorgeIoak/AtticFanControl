@@ -15,6 +15,10 @@ extern FanMode fanMode;
 extern void setFanState(bool fanOn);
 extern void cancelManualTimer();
 
+// Forward declarations for functions within this file
+void publishIndoorSensorData();
+void publishIndoorSensorDiscovery();
+
 // MQTT Client
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);

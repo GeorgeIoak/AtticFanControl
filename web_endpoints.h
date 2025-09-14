@@ -4,6 +4,7 @@
 #include <LittleFS.h>
 // Web server endpoint handlers (inline for Arduino compatibility)
 #include <ESP8266WebServer.h>
+#include <uri/UriBraces.h>
 #include <ArduinoJson.h>
 #include "history.h"
 #include "sensors.h"

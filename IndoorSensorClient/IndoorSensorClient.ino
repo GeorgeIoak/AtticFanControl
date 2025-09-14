@@ -21,6 +21,7 @@
 #include <ESP8266HTTPClient.h>
 #include <WiFiClient.h>
 #include <ArduinoJson.h>
+#include <ESP8266mDNS.h>
 #include <Wire.h>
 
 // Choose your sensor type (uncomment one)
@@ -34,20 +35,21 @@
 #ifdef USE_BME280
 #include <Adafruit_BME280.h>
 #endif
-
-// WiFi credentials
-const char* ssid = "YOUR_WIFI_SSID";
-const char* password = "YOUR_WIFI_PASSWORD";
+#include <ESP8266WiFi.h>
+#include "secrets.h" // Include WiFi credentials
 
 // Attic Fan Controller settings
-const char* ATTIC_FAN_IP = "192.168.1.100";  // Update with your controller's IP
+const char* CONTROLLER_MDNS_HOSTNAME = "AtticFan"; // mDNS name of the main controller
+const char* FALLBACK_CONTROLLER_IP = "192.168.1.100";  // Fallback IP if mDNS fails
 const int ATTIC_FAN_PORT = 80;
 const String ENDPOINT = "/indoor_sensors/data";
 
 // Sensor configuration
-const String SENSOR_ID = "sensor_livingroom_01";    // Unique ID for this sensor
-const String SENSOR_NAME = "Living Room";           // Human-readable name
-const unsigned long POST_INTERVAL = 30000;          // Send data every 30 seconds
+// =======================================================================
+// == EDIT THESE VALUES FOR EACH NEW SENSOR BOARD YOU CREATE            ==
+const String SENSOR_ID = "sensor_livingroom_01";    // <-- MUST be unique for each sensor
+const String SENSOR_NAME = "Living Room";           // <-- Human-readable name for the UI
+const unsigned long POST_INTERVAL_MS = 30000;       // Send data every 30 seconds
 
 // GPIO pins for I2C (adjust for your board)
 #define SDA_PIN D2
@@ -62,7 +64,8 @@ DFRobot_SHT20 sht21(&Wire, 0x40);
 Adafruit_BME280 bme;
 #endif
 
-unsigned long lastPost = 0;
+IPAddress controllerIP; // Will be resolved via mDNS
+unsigned long lastPostTime = 0;
 WiFiClient wifiClient;
 HTTPClient http;
 
@@ -77,13 +80,13 @@ void setup() {
   // Initialize sensor
   bool sensorOK = false;
 #ifdef USE_SHT21
-  sht21.initSHT20();
-  sensorOK = true;
-  Serial.println("SHT21 sensor initialized");
+  if (sht21.initSHT20() == 0) { // initSHT20 returns 0 on success
+    sensorOK = true;
+    Serial.println("SHT21 sensor initialized successfully.");
+  }
 #endif
-
 #ifdef USE_BME280
-  if (bme.begin()) {
+  if (bme.begin(0x76)) { // Use 0x76 as a common default address
     sensorOK = true;
     Serial.println("BME280 sensor initialized");
   } else {
@@ -96,41 +99,66 @@ void setup() {
     while(1) delay(1000);
   }
   
+  WiFi.mode(WIFI_STA);
+  WiFi.hostname("IndoorSensor-" + SENSOR_ID); // Set a unique hostname
   // Connect to WiFi
   WiFi.begin(ssid, password);
   Serial.print("Connecting to WiFi");
   
-  while (WiFi.status() != WL_CONNECTED) {
+  for (int i = 0; i < 20 && WiFi.status() != WL_CONNECTED; i++) {
     delay(1000);
     Serial.print(".");
   }
   
   Serial.println();
-  Serial.println("WiFi connected!");
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
-  Serial.print("Controller URL: http://");
-  Serial.print(ATTIC_FAN_IP);
-  Serial.println(ENDPOINT);
-  Serial.println();
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("WiFi connected!");
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());
+
+    // Discover controller via mDNS
+    Serial.printf("Querying for mDNS host '%s'...\n", CONTROLLER_MDNS_HOSTNAME);
+    controllerIP = MDNS.queryHost(CONTROLLER_MDNS_HOSTNAME, 3000); // 3-second timeout
+
+    if (controllerIP == IPAddress(0,0,0,0)) {
+      Serial.printf("WARN: mDNS query failed. Falling back to IP: %s\n", FALLBACK_CONTROLLER_IP);
+      if (!controllerIP.fromString(FALLBACK_CONTROLLER_IP)) {
+        Serial.println("ERROR: Fallback IP is invalid. Restarting...");
+        delay(10000);
+        ESP.restart();
+      }
+    } else {
+      Serial.print("SUCCESS: Controller found at IP: ");
+      Serial.println(controllerIP);
+    }
+
+    Serial.print("Controller URL: http://");
+    Serial.print(controllerIP.toString());
+    Serial.println(ENDPOINT);
+
+  } else {
+    Serial.println("WiFi connection FAILED. Please check credentials. Restarting in 10 seconds...");
+    delay(10000);
+    ESP.restart();
+  }
   
   // Send initial data immediately
-  lastPost = millis() - POST_INTERVAL;
+  lastPostTime = millis() - POST_INTERVAL_MS;
 }
 
 void loop() {
   // Check WiFi connection
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("WiFi disconnected, reconnecting...");
-    WiFi.reconnect();
+    WiFi.begin(ssid, password); // Use begin() for a more robust reconnect
     delay(5000);
     return;
   }
   
   // Send data at regular intervals
-  if (millis() - lastPost >= POST_INTERVAL) {
+  if (millis() - lastPostTime >= POST_INTERVAL_MS) {
     sendSensorData();
-    lastPost = millis();
+    lastPostTime = millis();
   }
   
   delay(1000);
@@ -142,16 +170,16 @@ void sendSensorData() {
   
   // Read sensor data
 #ifdef USE_SHT21
-  float tempC = sht21.readTemperature();
-  if (!isnan(tempC)) {
-    temperature = tempC * 1.8 + 32.0; // Convert to Fahrenheit
+  temperature = sht21.readTemperature();
+  humidity = sht21.readHumidity(); // DFRobot library returns NAN on failure
+  if (!isnan(temperature)) {
+    temperature = temperature * 1.8 + 32.0; // Convert Celsius to Fahrenheit
   }
-  humidity = sht21.readHumidity();
 #endif
 
 #ifdef USE_BME280
-  temperature = bme.readTemperature() * 1.8 + 32.0; // Convert to Fahrenheit
-  humidity = bme.readHumidity();
+  temperature = bme.readTemperature() * 1.8 + 32.0; // Adafruit library returns temp in C
+  humidity = bme.readHumidity(); // Adafruit library returns NAN on failure
 #endif
 
   // Validate readings
@@ -171,15 +199,16 @@ void sendSensorData() {
   StaticJsonDocument<200> doc;
   doc["sensorId"] = SENSOR_ID;
   doc["name"] = SENSOR_NAME;
-  doc["temperature"] = temperature;
+  doc["temperature"] = serialized(String(temperature, 1)); // Send as string with 1 decimal place
   doc["humidity"] = humidity;
   
   String jsonString;
   serializeJson(doc, jsonString);
   
   // Send HTTP POST request
-  String url = "http://" + String(ATTIC_FAN_IP) + ":" + String(ATTIC_FAN_PORT) + ENDPOINT;
+  String url = "http://" + controllerIP.toString() + ":" + String(ATTIC_FAN_PORT) + ENDPOINT;
   
+  http.setReuse(true); // Reuse TCP connection for efficiency
   http.begin(wifiClient, url);
   http.addHeader("Content-Type", "application/json");
   
