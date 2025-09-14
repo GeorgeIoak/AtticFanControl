@@ -27,6 +27,12 @@ This project lets you control an attic fan using a web interface hosted on an ES
       - [Method B: OTA Upload (Web UI Only)](#method-b-ota-upload-web-ui-only)
       - [Method C: Wired Upload (Initial Flash or Recovery)](#method-c-wired-upload-initial-flash-or-recovery)
   - [API Reference](#api-reference)
+  - [🏠 Indoor Sensor Integration](#-indoor-sensor-integration)
+    - [Features](#features)
+    - [API Endpoints](#api-endpoints)
+    - [Indoor Sensor Setup](#indoor-sensor-setup)
+    - [Example Indoor Sensor Configuration](#example-indoor-sensor-configuration)
+    - [Integration with Fan Logic](#integration-with-fan-logic)
 
 ## ✨ Features
 
@@ -62,8 +68,8 @@ This project lets you control an attic fan using a web interface hosted on an ES
 ## 📦 Project Structure
 
 ```text
-AndyAtticFanControl/
-├── AndyAtticFanControl.ino   # Main Arduino sketch
+AtticFanControl/
+├── AtticFanControl.ino   # Main Arduino sketch
 ├── webui_embedded.h          # Embedded web UI (if USE_FS_WEBUI is 0)
 ├── help_page.h               # Embedded help page (if USE_FS_WEBUI is 0)
 ├── types.h                   # Shared type definitions (e.g., FanMode)
@@ -141,7 +147,7 @@ secrets.h
 **Custom UI:** Serve your own `index.html` from the ESP8266 filesystem (LittleFS).
 
 **How to switch:**
-1. In `AndyAttticFanControl.ino`, set:
+1. In `AttticFanControl.ino`, set:
 	```cpp
 	#define USE_FS_WEBUI 1
 	``` 
@@ -174,7 +180,7 @@ This packs the contents of the `data/` folder into a `filesystem.bin` file.
 
 ### Step 2: Change the Firmware Flag
 
-In `AndyAtticFanControl.ino`, change the flag to `1` to tell the firmware to use the files from the filesystem:
+In `AtticFanControl.ino`, change the flag to `1` to tell the firmware to use the files from the filesystem:
 ```cpp
 #define USE_FS_WEBUI 1
 ```
