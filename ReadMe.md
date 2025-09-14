@@ -68,15 +68,17 @@ This project lets you control an attic fan using a web interface hosted on an ES
 ## 📦 Project Structure
 
 ```text
-AtticFanControl/
-├── AtticFanControl.ino   # Main Arduino sketch
-├── webui_embedded.h          # Embedded web UI (if USE_FS_WEBUI is 0)
-├── help_page.h               # Embedded help page (if USE_FS_WEBUI is 0)
-├── types.h                   # Shared type definitions (e.g., FanMode)
-├── config.h                  # EEPROM configuration management
-├── secrets.h                 # Wi-Fi credentials (excluded from repo)
-├── sensors.h                 # Sensor logic
-├── hardware.h                # Hardware config and flags
+AtticFanControl/                  # Main project folder
+├── AtticFanControl.ino           # Main Arduino sketch for the fan controller
+├── webui_embedded.h              # Embedded web UI (if USE_FS_WEBUI is 0)
+├── help_page.h                   # Embedded help page (if USE_FS_WEBUI is 0)
+├── types.h                       # Shared type definitions (e.g., FanMode)
+├── config.h                      # EEPROM configuration management
+├── secrets.h                     # Wi-Fi credentials (excluded from repo)
+├── sensors.h                     # Sensor logic
+├── hardware.h                    # Hardware config and flags
+├── IndoorSensorClient/           # Separate sketch for the indoor sensor node
+│   └── IndoorSensorClient.ino    # Code to be flashed onto the indoor sensor ESP8266
 ├── data/                     # Filesystem folder for FS upload
 │   └── index.html            # Place your custom UI here
 │   └── help.html             # Place your custom help page here
@@ -297,7 +299,7 @@ This version adds support for multiple ESP8266-based indoor sensors that can rep
    - SHT21, SHT20, or BME280 temperature/humidity sensor
    - I2C connections (SDA/SCL pins)
 
-2. **Software**: Use the provided `IndoorSensorClient.ino` sketch:
+2. **Software**: Open the `IndoorSensorClient/IndoorSensorClient.ino` sketch in the Arduino IDE. This is a separate sketch from the main controller.
    - Update WiFi credentials
    - Set the main controller's IP address
    - Configure unique sensor ID and name
