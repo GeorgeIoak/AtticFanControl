@@ -23,6 +23,7 @@ struct __attribute__((packed)) Config {
   bool dailyRestartEnabled;
   bool mqttEnabled;
   bool mqttDiscoveryEnabled;
+  bool indoorSensorsEnabled;
   unsigned long historyLogIntervalMs;
 };
 
@@ -98,6 +99,7 @@ inline void loadConfig() {
     config.dailyRestartEnabled = DAILY_RESTART_ENABLED_DEFAULT;
     config.mqttEnabled = MQTT_ENABLED_DEFAULT;
     config.mqttDiscoveryEnabled = MQTT_DISCOVERY_ENABLED_DEFAULT;
+    config.indoorSensorsEnabled = INDOOR_SENSORS_ENABLED_DEFAULT;
     config.historyLogIntervalMs = HISTORY_LOG_INTERVAL_DEFAULT;
     // Save the default configuration for next time
     saveConfig();
@@ -125,6 +127,7 @@ inline void loadConfig() {
     config.dailyRestartEnabled = DAILY_RESTART_ENABLED_DEFAULT;
     config.mqttEnabled = MQTT_ENABLED_DEFAULT;
     config.mqttDiscoveryEnabled = MQTT_DISCOVERY_ENABLED_DEFAULT;
+    config.indoorSensorsEnabled = INDOOR_SENSORS_ENABLED_DEFAULT;
     config.historyLogIntervalMs = HISTORY_LOG_INTERVAL_DEFAULT;
     // Save the default configuration for next time
     saveConfig();
@@ -151,6 +154,7 @@ inline void loadConfig() {
     logSerial("  - Daily Restart Enabled: %s", config.dailyRestartEnabled ? "true" : "false");
     logSerial("  - MQTT Enabled: %s", config.mqttEnabled ? "true" : "false");
     logSerial("  - MQTT Discovery Enabled: %s", config.mqttDiscoveryEnabled ? "true" : "false");
+    logSerial("  - Indoor Sensors Enabled: %s", config.indoorSensorsEnabled ? "true" : "false");
     logSerial("  - History Log Interval: %lu ms", config.historyLogIntervalMs);
     #endif
 

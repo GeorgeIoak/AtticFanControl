@@ -14,12 +14,24 @@
   <div class="top-layout-grid">
     <div class="sensor-column">
       <div class="sensor-item">
+        <strong>🌤️ Outdoor</strong>
+        <div class="sensor-value"><span id="outdoorTemp">--</span>°F</div>
+      </div>
+      <div class="sensor-item">
         <strong>🌡️ Attic</strong>
         <div class="sensor-value"><span id="atticTemp">--</span>°F / <span id="atticHumidity">--</span>%</div>
       </div>
-      <div class="sensor-item">
-        <strong>🌤️ Outdoor</strong>
-        <div class="sensor-value"><span id="outdoorTemp">--</span>°F</div>
+      <div class="sensor-item" id="indoorSensorDisplay" style="display: none;">
+        <strong>🏠 Indoor (Avg) <a href="#" onclick="openIndoorSensorsModal(event)" class="help-link" title="Click to see all indoor sensors" aria-label="Help on indoor sensors">(+)</a></strong>
+        <div class="sensor-value"><span id="avgIndoorTemp">--</span>°F / <span id="avgIndoorHumidity">--</span>%</div>
+      </div>
+      <div class="sensor-item" id="indoorSensor1" style="display: none;">
+        <strong id="indoorSensor1Name">--</strong>
+        <div class="sensor-value"><span id="indoorSensor1Temp">--</span>°F / <span id="indoorSensor1Humidity">--</span>%</div>
+      </div>
+      <div class="sensor-item" id="indoorSensor2" style="display: none;">
+        <strong id="indoorSensor2Name">--</strong>
+        <div class="sensor-value"><span id="indoorSensor2Temp">--</span>°F / <span id="indoorSensor2Humidity">--</span>%</div>
       </div>
     </div>
     <div class="control-column">
@@ -177,6 +189,15 @@
       </select>
     </div>
     <div class="timer-actions"><button class="section-save-btn" onclick="startTimedRun()">Start Timed Run</button></div>
+  </div>
+</div>
+
+<!-- Indoor Sensors Modal -->
+<div id="indoorSensorsModal" class="modal">
+  <div class="modal-content">
+    <span class="close-btn" onclick="closeIndoorSensorsModal()">&times;</span>
+    <h3>All Indoor Sensors</h3>
+    <div id="indoorSensorsList"></div>
   </div>
 </div>
 

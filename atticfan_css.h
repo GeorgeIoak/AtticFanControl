@@ -9,6 +9,8 @@
 
 #undef F
 const char ATTICFAN_CSS[] PROGMEM = R"EMB1(
+@charset "UTF-8";
+
 /* Add vertical spacing between ON/OFF and SET TIMER buttons in Mode Control */
 #mode-control-box > div:last-child button + button + button {
   margin-top: 0.75rem;
@@ -82,7 +84,7 @@ h2 {
   width: 100%;
 }
 .top-layout-grid{display:grid;grid-template-columns:250px minmax(0, 1fr);gap:20px;margin-bottom:20px;align-items:stretch}
-.sensor-column{display:flex;flex-direction:column;gap:20px;justify-content:space-between}
+.sensor-column{display:flex;flex-direction:column;gap:20px;justify-content:flex-start}
 .control-column{display:flex}
 
 /* fill the right column card */
@@ -230,6 +232,12 @@ input:checked+.slider:before{transform:translateX(26px)}
   margin-top: 8px;
 }
 .number-input-wrapper{display:flex;align-items:center;justify-content:center;width:100%}
+
+/* Push the input/switch to the bottom of the config item for vertical alignment */
+.config-item > .number-input-wrapper,
+.config-item > .switch {
+  margin-top: auto;
+}
 .number-input-wrapper input{text-align:center;font-size:1.1rem;height:44px;width:100%;max-width:120px;border:2px solid var(--border-light);border-radius:8px;transition:.2s;background:#fff;-moz-appearance:textfield}
 .number-input-wrapper input:focus{outline:none;border-color:var(--primary-blue);box-shadow:0 0 0 3px rgba(33,150,243,.1)}
 /* New style for the save button container to span the full width of the grid */
@@ -277,6 +285,18 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 .modal .timer-options { margin-top: 15px; }
 .modal .timer-options select { padding: 5px; }
 .modal .timer-actions { margin-top: 20px; }
+
+/* Styles for the indoor sensor list modal */
+#indoorSensorsList {
+  max-height: 40vh;
+  overflow-y: auto;
+}
+.sensor-modal-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 5px;
+  border-bottom: 1px solid var(--border-light);
+}
 
 /* ---------- Footer ---------- */
 .app-footer { margin-top: 2rem; padding: 0.75rem 0; text-align: center; opacity: 0.8; }
@@ -327,6 +347,193 @@ a{color:#1976D2}
 
 @media (max-width:900px){
   #mode-control-box{padding:20px}
+}
+
+/* --- Utility Styles --- */
+.error-message {
+  color: var(--danger-red);
+  background-color: rgba(220, 53, 69, 0.05);
+  border: 1px solid rgba(220, 53, 69, 0.2);
+  padding: 15px;
+  border-radius: 8px;
+}
+
+/* --- Indoor Sensor Dashboard Styles --- */
+.stats { 
+    display: flex; 
+    justify-content: space-around; 
+    margin-bottom: 30px; 
+    flex-wrap: wrap; 
+    gap: 15px;
+}
+.stat-card { 
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+    color: white; 
+    padding: 20px; 
+    border-radius: 12px; 
+    text-align: center; 
+    min-width: 150px; 
+    flex: 1;
+    box-shadow: var(--shadow-sm);
+}
+.stat-number { 
+    font-size: 2em; 
+    font-weight: bold; 
+    margin-bottom: 5px; 
+}
+.stat-label { 
+    font-size: 0.9em; 
+    opacity: 0.9; 
+}
+.sensor-grid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+    gap: 20px; 
+    margin-top: 20px; 
+}
+.sensor-card { 
+    border: 1px solid var(--border-light); 
+    border-radius: 12px; 
+    padding: 15px; 
+    background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf3 100%); 
+    position: relative;
+    box-shadow: var(--shadow-sm);
+}
+.sensor-card.offline { 
+    opacity: 0.6; 
+    background: linear-gradient(135deg, #fff2f2 0%, #ffe4e4 100%); 
+}
+.sensor-name { 
+    font-weight: bold; 
+    font-size: 1.1em; 
+    margin-bottom: 10px; 
+    color: #333; 
+}
+.sensor-data { 
+    display: flex; 
+    justify-content: space-between; 
+    margin-bottom: 8px; 
+    font-size: 0.95em;
+}
+.sensor-value { 
+    font-size: 1.2em; 
+    font-weight: bold; 
+}
+.sensor-value.temp { color: #e74c3c; }
+.sensor-value.humidity { color: #3498db; }
+.last-update { 
+    font-size: 0.85em; 
+    color: #666; 
+    margin-top: 10px; 
+}
+.remove-btn { 
+    background: #e74c3c; 
+    color: white; 
+    border: none; 
+    padding: 2px 8px;
+    font-size: 1.2em;
+    line-height: 1;
+    border-radius: 4px; 
+    cursor: pointer; 
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+.remove-btn:hover { 
+    background: #c0392b; 
+}
+.dashboard-controls { 
+    text-align: center; 
+    margin-bottom: 20px; 
+}
+
+/* --- Indoor Sensor Dashboard Styles --- */
+.stats { 
+    display: flex; 
+    justify-content: space-around; 
+    margin-bottom: 30px; 
+    flex-wrap: wrap; 
+    gap: 15px;
+}
+.stat-card { 
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+    color: white; 
+    padding: 20px; 
+    border-radius: 12px; 
+    text-align: center; 
+    min-width: 150px; 
+    flex: 1;
+    box-shadow: var(--shadow-sm);
+}
+.stat-number { 
+    font-size: 2em; 
+    font-weight: bold; 
+    margin-bottom: 5px; 
+}
+.stat-label { 
+    font-size: 0.9em; 
+    opacity: 0.9; 
+}
+.sensor-grid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+    gap: 20px; 
+    margin-top: 20px; 
+}
+.sensor-card { 
+    border: 1px solid var(--border-light); 
+    border-radius: 12px; 
+    padding: 15px; 
+    background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf3 100%); 
+    position: relative;
+    box-shadow: var(--shadow-sm);
+}
+.sensor-card.offline { 
+    opacity: 0.6; 
+    background: linear-gradient(135deg, #fff2f2 0%, #ffe4e4 100%); 
+}
+.sensor-name { 
+    font-weight: bold; 
+    font-size: 1.1em; 
+    margin-bottom: 10px; 
+    color: #333; 
+}
+.sensor-data { 
+    display: flex; 
+    justify-content: space-between; 
+    margin-bottom: 8px; 
+    font-size: 0.95em;
+}
+.sensor-value { 
+    font-size: 1.2em; 
+    font-weight: bold; 
+}
+.sensor-value.temp { color: #e74c3c; }
+.sensor-value.humidity { color: #3498db; }
+.last-update { 
+    font-size: 0.85em; 
+    color: #666; 
+    margin-top: 10px; 
+}
+.remove-btn { 
+    background: #e74c3c; 
+    color: white; 
+    border: none; 
+    padding: 2px 8px;
+    font-size: 1.2em;
+    line-height: 1;
+    border-radius: 4px; 
+    cursor: pointer; 
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+.remove-btn:hover { 
+    background: #c0392b; 
+}
+.dashboard-controls { 
+    text-align: center; 
+    margin-bottom: 20px; 
 }
 )EMB1";
 const size_t ATTICFAN_CSS_LEN = sizeof(ATTICFAN_CSS) - 1;

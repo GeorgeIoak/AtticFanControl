@@ -8,11 +8,16 @@
 #include "config.h"
 #include "types.h"
 #include "sensors.h"
+#include "indoor_sensors.h"
 
 // Forward declarations from the main .ino file
 extern FanMode fanMode;
 extern void setFanState(bool fanOn);
 extern void cancelManualTimer();
+
+// Forward declarations for functions within this file
+void publishIndoorSensorData();
+void publishIndoorSensorDiscovery();
 
 // MQTT Client
 WiFiClient espClient;
@@ -159,6 +164,10 @@ void reconnectMqtt() {
         mqttClient.subscribe(modeCommandTopic);
         if (config.mqttDiscoveryEnabled) {
             publishDiscovery();
+            // Publish indoor sensor discovery topics if enabled
+            if (config.indoorSensorsEnabled) {
+                publishIndoorSensorDiscovery();
+            }
         }
     } else {
         #if DEBUG_SERIAL
@@ -262,6 +271,155 @@ void handleMqtt() {
         if (millis() - lastStatePublish > 30000) { // Publish every 30 seconds
             lastStatePublish = millis();
             publishState();
+            
+            // Publish indoor sensor data if enabled
+            if (config.indoorSensorsEnabled) {
+                publishIndoorSensorData();
+            }
         }
     }
+}
+
+/**
+ * @brief Publishes indoor sensor data to MQTT
+ */
+void publishIndoorSensorData() {
+    if (!config.mqttEnabled || !config.indoorSensorsEnabled) return;
+    
+    cleanupExpiredSensors(); // Ensure we have current data
+    
+    char topicBuffer[80];
+    char payloadBuffer[200];
+    
+    // Publish individual sensor data
+    for (int i = 0; i < MAX_INDOOR_SENSORS; i++) {
+        if (indoorSensors[i].isActive) {
+            StaticJsonDocument<128> doc;
+            
+            // Temperature sensor
+            doc["value"] = indoorSensors[i].temperature;
+            doc["timestamp"] = indoorSensors[i].lastUpdate;
+            serializeJson(doc, payloadBuffer);
+            snprintf(topicBuffer, sizeof(topicBuffer), "indoor_sensor/%s/temperature/state", 
+                     indoorSensors[i].sensorId.c_str());
+            mqttClient.publish(topicBuffer, payloadBuffer, true);
+            
+            // Humidity sensor
+            doc["value"] = indoorSensors[i].humidity;
+            serializeJson(doc, payloadBuffer);
+            snprintf(topicBuffer, sizeof(topicBuffer), "indoor_sensor/%s/humidity/state", 
+                     indoorSensors[i].sensorId.c_str());
+            mqttClient.publish(topicBuffer, payloadBuffer, true);
+        }
+    }
+    
+    // Publish average values
+    float avgTemp = getAverageIndoorTemperature();
+    float avgHumidity = getAverageIndoorHumidity();
+    
+    if (!isnan(avgTemp)) {
+        StaticJsonDocument<64> doc;
+        doc["value"] = avgTemp;
+        serializeJson(doc, payloadBuffer);
+        snprintf(topicBuffer, sizeof(topicBuffer), "%s/indoor_avg/temperature/state", baseTopic);
+        mqttClient.publish(topicBuffer, payloadBuffer, true);
+    }
+    
+    if (!isnan(avgHumidity)) {
+        StaticJsonDocument<64> doc;
+        doc["value"] = avgHumidity;
+        serializeJson(doc, payloadBuffer);
+        snprintf(topicBuffer, sizeof(topicBuffer), "%s/indoor_avg/humidity/state", baseTopic);
+        mqttClient.publish(topicBuffer, payloadBuffer, true);
+    }
+    
+    // Publish sensor count
+    StaticJsonDocument<64> countDoc;
+    countDoc["value"] = getActiveSensorCount();
+    serializeJson(countDoc, payloadBuffer);
+    snprintf(topicBuffer, sizeof(topicBuffer), "%s/indoor_sensor/count/state", baseTopic);
+    mqttClient.publish(topicBuffer, payloadBuffer, true);
+}
+
+/**
+ * @brief Publishes Home Assistant discovery topics for indoor sensors
+ */
+void publishIndoorSensorDiscovery() {
+    if (!config.mqttEnabled || !config.mqttDiscoveryEnabled || !config.indoorSensorsEnabled) return;
+    
+    char topicBuffer[120];
+    char payloadBuffer[400];
+    
+    cleanupExpiredSensors(); // Ensure we have current data
+    
+    // Publish discovery for each active sensor
+    for (int i = 0; i < MAX_INDOOR_SENSORS; i++) {
+        if (indoorSensors[i].isActive) {
+            StaticJsonDocument<400> doc;
+            
+            // Temperature sensor discovery
+            doc["name"] = indoorSensors[i].name + " Temperature";
+            doc["unique_id"] = String("atticfan_indoor_") + indoorSensors[i].sensorId + "_temp";
+            doc["state_topic"] = "indoor_sensor/" + indoorSensors[i].sensorId + "/temperature/state";
+            doc["value_template"] = "{{ value_json.value }}";
+            doc["unit_of_measurement"] = "°F";
+            doc["device_class"] = "temperature";
+            doc["expire_after"] = 1800; // 30 minutes
+            
+            JsonObject device = doc.createNestedObject("device");
+            device["identifiers"][0] = String("indoor_sensor_") + indoorSensors[i].sensorId;
+            device["name"] = indoorSensors[i].name + " Sensor";
+            device["model"] = "ESP8266 Indoor Sensor";
+            device["manufacturer"] = "AtticFanControl";
+            device["via_device"] = "attic_fan_controller";
+            
+            serializeJson(doc, payloadBuffer);
+            snprintf(topicBuffer, sizeof(topicBuffer), "homeassistant/sensor/atticfan_indoor_%s_temp/config", 
+                     indoorSensors[i].sensorId.c_str());
+            mqttClient.publish(topicBuffer, payloadBuffer, true);
+            
+            // Humidity sensor discovery
+            doc["name"] = indoorSensors[i].name + " Humidity";
+            doc["unique_id"] = String("atticfan_indoor_") + indoorSensors[i].sensorId + "_humidity";
+            doc["state_topic"] = "indoor_sensor/" + indoorSensors[i].sensorId + "/humidity/state";
+            doc["unit_of_measurement"] = "%";
+            doc["device_class"] = "humidity";
+            
+            serializeJson(doc, payloadBuffer);
+            snprintf(topicBuffer, sizeof(topicBuffer), "homeassistant/sensor/atticfan_indoor_%s_humidity/config", 
+                     indoorSensors[i].sensorId.c_str());
+            mqttClient.publish(topicBuffer, payloadBuffer, true);
+        }
+    }
+    
+    // Publish discovery for average temperature
+    StaticJsonDocument<300> avgTempDoc;
+    avgTempDoc["name"] = "Indoor Average Temperature";
+    avgTempDoc["unique_id"] = "atticfan_indoor_avg_temp";
+    avgTempDoc["state_topic"] = String(baseTopic) + "/indoor_avg/temperature/state";
+    avgTempDoc["value_template"] = "{{ value_json.value }}";
+    avgTempDoc["unit_of_measurement"] = "°F";
+    avgTempDoc["device_class"] = "temperature";
+    avgTempDoc["expire_after"] = 1800;
+    
+    JsonObject avgTempDevice = avgTempDoc.createNestedObject("device");
+    avgTempDevice["identifiers"][0] = "attic_fan_controller";
+    avgTempDevice["name"] = "Attic Fan Controller";
+    avgTempDevice["model"] = "ESP8266";
+    avgTempDevice["manufacturer"] = "AtticFanControl";
+    
+    serializeJson(avgTempDoc, payloadBuffer);
+    snprintf(topicBuffer, sizeof(topicBuffer), "homeassistant/sensor/atticfan_indoor_avg_temp/config");
+    mqttClient.publish(topicBuffer, payloadBuffer, true);
+    
+    // Publish discovery for average humidity
+    avgTempDoc["name"] = "Indoor Average Humidity";
+    avgTempDoc["unique_id"] = "atticfan_indoor_avg_humidity";
+    avgTempDoc["state_topic"] = String(baseTopic) + "/indoor_avg/humidity/state";
+    avgTempDoc["unit_of_measurement"] = "%";
+    avgTempDoc["device_class"] = "humidity";
+    
+    serializeJson(avgTempDoc, payloadBuffer);
+    snprintf(topicBuffer, sizeof(topicBuffer), "homeassistant/sensor/atticfan_indoor_avg_humidity/config");
+    mqttClient.publish(topicBuffer, payloadBuffer, true);
 }

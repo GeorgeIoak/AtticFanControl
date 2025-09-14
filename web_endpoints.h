@@ -4,6 +4,7 @@
 #include <LittleFS.h>
 // Web server endpoint handlers (inline for Arduino compatibility)
 #include <ESP8266WebServer.h>
+#include <uri/UriBraces.h>
 #include <ArduinoJson.h>
 #include "history.h"
 #include "sensors.h"
@@ -16,6 +17,7 @@
 #include "config.h"
 #include "weather.h"
 #include "types.h"
+#include "indoor_sensors.h"
 
 extern void logDiagnostics(const char* msg);
 extern ESP8266WebServer server;
@@ -196,6 +198,25 @@ inline void handleStatus(ESP8266WebServer &server, FanMode fanMode) {
     doc["simulatedOutdoorTemp"] = simulatedOutdoorTemp;
     doc["simulatedAtticHumidity"] = simulatedAtticHumidity;
   }
+  
+  // Add indoor sensor data if enabled
+  if (config.indoorSensorsEnabled) {
+    doc["indoorSensorsEnabled"] = true;
+    doc["indoorSensorCount"] = getActiveSensorCount();
+    
+    float avgIndoorTemp = getAverageIndoorTemperature();
+    float avgIndoorHumidity = getAverageIndoorHumidity();
+    
+    if (!isnan(avgIndoorTemp)) {
+      doc["avgIndoorTemp"] = serialized(String(avgIndoorTemp, 1));
+    }
+    if (!isnan(avgIndoorHumidity)) {
+      doc["avgIndoorHumidity"] = serialized(String(avgIndoorHumidity, 1));
+    }
+  } else {
+    doc["indoorSensorsEnabled"] = false;
+  }
+  
   server.send(200, "application/json", doc.as<String>());
 }
 
@@ -233,6 +254,7 @@ inline void handleGetConfig(ESP8266WebServer &server) {
   doc["dailyRestartEnabled"] = config.dailyRestartEnabled;
   doc["mqttEnabled"] = config.mqttEnabled;
   doc["mqttDiscoveryEnabled"] = config.mqttDiscoveryEnabled;
+  doc["indoorSensorsEnabled"] = config.indoorSensorsEnabled;
   doc["historyLogIntervalMs"] = config.historyLogIntervalMs;
   server.send(200, "application/json", doc.as<String>());
 }
@@ -302,6 +324,9 @@ inline void handleSetConfig(ESP8266WebServer &server) {
   if (doc.containsKey("mqttDiscoveryEnabled")) {
     config.mqttDiscoveryEnabled = doc["mqttDiscoveryEnabled"];
   }
+  if (doc.containsKey("indoorSensorsEnabled")) {
+    config.indoorSensorsEnabled = doc["indoorSensorsEnabled"];
+  }
   if (doc.containsKey("historyLogIntervalMs")) {
     config.historyLogIntervalMs = doc["historyLogIntervalMs"];
   }
@@ -364,4 +389,131 @@ inline void handleUpdateWrapper(ESP8266WebServer &server) {
 <!DOCTYPE html><html><head><title>Firmware Update</title><meta name="viewport" content="width=device-width, initial-scale=1"><style>body{margin:0;font-family:Arial,sans-serif}.header{background-color:#333;padding:15px;text-align:center}.header a{color:white;text-decoration:none;font-size:1.2em}iframe{border:none;width:100%;height:calc(100vh - 55px)}</style></head><body><div class="header"><a href="/">&larr; Back to Main Control Page</a></div><iframe src="/update"></iframe></body></html>
 )rawliteral";
   server.send(200, "text/html", update_page_wrapper);
+}
+
+/**
+ * @brief Handle indoor sensor data submission
+ * POST /indoor_sensors/data
+ * Expected JSON: {"sensorId": "sensor1", "name": "Living Room", "temperature": 72.5, "humidity": 45.2}
+ */
+inline void handleIndoorSensorData(ESP8266WebServer &server) {
+  if (server.method() != HTTP_POST) {
+    server.send(405, "text/plain", "Method not allowed");
+    return;
+  }
+  
+  if (!server.hasArg("plain")) {
+    server.send(400, "text/plain", "Missing JSON body");
+    return;
+  }
+  
+  StaticJsonDocument<256> doc;
+  DeserializationError error = deserializeJson(doc, server.arg("plain"));
+  
+  if (error) {
+    server.send(400, "text/plain", "Invalid JSON");
+    return;
+  }
+  
+  // Validate required fields
+  if (!doc.containsKey("sensorId") || !doc.containsKey("name") || 
+      !doc.containsKey("temperature") || !doc.containsKey("humidity")) {
+    server.send(400, "text/plain", "Missing required fields: sensorId, name, temperature, humidity");
+    return;
+  }
+  
+  String sensorId = doc["sensorId"].as<String>();
+  String name = doc["name"].as<String>();
+  float temperature = doc["temperature"];
+  float humidity = doc["humidity"];
+  String clientIP = server.client().remoteIP().toString();
+  
+  // Validate ranges
+  if (temperature < -50 || temperature > 150 || humidity < 0 || humidity > 100) {
+    server.send(400, "text/plain", "Sensor values out of range");
+    return;
+  }
+  
+  bool success = registerOrUpdateSensor(sensorId, name, temperature, humidity, clientIP);
+  
+  if (success) {
+    server.send(200, "application/json", "{\"status\":\"success\",\"message\":\"Sensor data updated\"}");
+  } else {
+    server.send(507, "application/json", "{\"status\":\"error\",\"message\":\"Maximum sensors reached\"}");
+  }
+}
+
+/**
+ * @brief Get list of all indoor sensors
+ * GET /indoor_sensors
+ */
+inline void handleGetIndoorSensors(ESP8266WebServer &server) {
+  cleanupExpiredSensors(); // Clean up before responding
+  
+  StaticJsonDocument<2048> doc;
+  JsonArray sensors = doc.createNestedArray("sensors");
+  
+  for (int i = 0; i < MAX_INDOOR_SENSORS; i++) {
+    if (indoorSensors[i].isActive) {
+      JsonObject sensor = sensors.createNestedObject();
+      sensor["sensorId"] = indoorSensors[i].sensorId;
+      sensor["name"] = indoorSensors[i].name;
+      sensor["temperature"] = serialized(String(indoorSensors[i].temperature, 1));
+      sensor["humidity"] = serialized(String(indoorSensors[i].humidity, 1));
+      sensor["lastUpdate"] = indoorSensors[i].lastUpdate;
+      sensor["ipAddress"] = indoorSensors[i].ipAddress;
+      
+      // Calculate time since last update
+      unsigned long timeSinceUpdate = millis() - indoorSensors[i].lastUpdate;
+      sensor["secondsSinceUpdate"] = timeSinceUpdate / 1000;
+    }
+  }
+  
+  doc["count"] = getActiveSensorCount();
+  doc["maxSensors"] = MAX_INDOOR_SENSORS;
+  
+  // Add average values
+  float avgTemp = getAverageIndoorTemperature();
+  float avgHumidity = getAverageIndoorHumidity();
+  
+  if (!isnan(avgTemp)) {
+    doc["averageTemperature"] = serialized(String(avgTemp, 1));
+  } else {
+    doc["averageTemperature"] = nullptr;
+  }
+  
+  if (!isnan(avgHumidity)) {
+    doc["averageHumidity"] = serialized(String(avgHumidity, 1));
+  } else {
+    doc["averageHumidity"] = nullptr;
+  }
+  
+  String response;
+  serializeJson(doc, response);
+  server.send(200, "application/json", response);
+}
+
+/**
+ * @brief Remove an indoor sensor
+ * DELETE /indoor_sensors/{sensorId}
+ */
+inline void handleRemoveIndoorSensor(ESP8266WebServer &server) {
+  if (server.method() != HTTP_DELETE && server.method() != HTTP_POST) {
+    server.send(405, "text/plain", "Method not allowed");
+    return;
+  }
+  
+  String sensorId = server.pathArg(0);
+  if (sensorId.length() == 0) {
+    server.send(400, "text/plain", "Sensor ID required");
+    return;
+  }
+  
+  bool success = removeSensor(sensorId);
+  
+  if (success) {
+    server.send(200, "application/json", "{\"status\":\"success\",\"message\":\"Sensor removed\"}");
+  } else {
+    server.send(404, "application/json", "{\"status\":\"error\",\"message\":\"Sensor not found\"}");
+  }
 }

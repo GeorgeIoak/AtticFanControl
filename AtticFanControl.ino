@@ -17,6 +17,7 @@
 #include "types.h"
 #include "history.h"
 #include "diagnostics.h"
+#include "indoor_sensors.h"
 
 #define USE_FS_WEBUI 0 // Set to 1 to use index.html from FS
 
@@ -135,6 +136,7 @@ void setup() {
   loadConfig(); // Load settings from EEPROM
   fanMode = config.fanMode; // Restore the last saved fan mode from config
   initSensors();
+  initIndoorSensors(); // Initialize indoor sensors system
   initMqtt(); // Initialize MQTT client
   pinMode(FAN_RELAY_PIN, OUTPUT);
   pinMode(ONBOARD_LED_PIN, OUTPUT);
@@ -201,6 +203,12 @@ void setup() {
   }
   server.on("/weather", HTTP_GET, [&]() { handleWeather(server); });
   server.on("/history.csv", HTTP_GET, [](){ handleHistoryDownload(server); });
+  // Indoor sensors endpoints
+  if (config.indoorSensorsEnabled) {
+    server.on("/indoor_sensors/data", HTTP_POST, [](){ handleIndoorSensorData(server); });
+    server.on("/indoor_sensors", HTTP_GET, [](){ handleGetIndoorSensors(server); });
+    server.on(UriBraces("/indoor_sensors/{}"), HTTP_DELETE, [](){ handleRemoveIndoorSensor(server); });
+  }
   server.on("/restart", [](){ handleRestart(server); });
   server.on("/reset_config", [](){ handleResetConfig(server); });
   server.on("/clear_diagnostics", [](){ handleClearDiagnostics(server); });
@@ -508,6 +516,15 @@ void loop() {
 
   // Check if a daily restart is needed for long-term stability.
   handleDailyRestart();
+  
+  // Clean up expired indoor sensors periodically (if enabled)
+  if (config.indoorSensorsEnabled) {
+    static unsigned long lastSensorCleanup = 0;
+    if (millis() - lastSensorCleanup > 60000) { // Every minute
+      cleanupExpiredSensors();
+      lastSensorCleanup = millis();
+    }
+  }
 
   // Only run fan logic at the specified interval
   if (millis() - lastSensorRead >= SENSOR_UPDATE_INTERVAL_MS) {

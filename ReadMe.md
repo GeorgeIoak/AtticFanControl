@@ -27,6 +27,12 @@ This project lets you control an attic fan using a web interface hosted on an ES
       - [Method B: OTA Upload (Web UI Only)](#method-b-ota-upload-web-ui-only)
       - [Method C: Wired Upload (Initial Flash or Recovery)](#method-c-wired-upload-initial-flash-or-recovery)
   - [API Reference](#api-reference)
+  - [🏠 Indoor Sensor Integration](#-indoor-sensor-integration)
+    - [Features](#features)
+    - [API Endpoints](#api-endpoints)
+    - [Indoor Sensor Setup](#indoor-sensor-setup)
+    - [Example Indoor Sensor Configuration](#example-indoor-sensor-configuration)
+    - [Integration with Fan Logic](#integration-with-fan-logic)
 
 ## ✨ Features
 
@@ -62,15 +68,19 @@ This project lets you control an attic fan using a web interface hosted on an ES
 ## 📦 Project Structure
 
 ```text
-AndyAtticFanControl/
-├── AndyAtticFanControl.ino   # Main Arduino sketch
-├── webui_embedded.h          # Embedded web UI (if USE_FS_WEBUI is 0)
-├── help_page.h               # Embedded help page (if USE_FS_WEBUI is 0)
-├── types.h                   # Shared type definitions (e.g., FanMode)
-├── config.h                  # EEPROM configuration management
-├── secrets.h                 # Wi-Fi credentials (excluded from repo)
-├── sensors.h                 # Sensor logic
-├── hardware.h                # Hardware config and flags
+AtticFanControl/                  # Main project folder
+├── AtticFanControl.ino           # Main Arduino sketch for the fan controller
+├── webui_embedded.h              # Embedded web UI (if USE_FS_WEBUI is 0)
+├── help_page.h                   # Embedded help page (if USE_FS_WEBUI is 0)
+├── types.h                       # Shared type definitions (e.g., FanMode)
+├── config.h                      # EEPROM configuration management
+├── secrets.h                     # Wi-Fi credentials (excluded from repo)
+├── sensors.h                     # Sensor logic
+├── hardware.h                    # Hardware config and flags
+├── IndoorSensorClient/           # --- SEPARATE SKETCH for the Indoor Sensor Node ---
+│   ├── secrets_example.h         # Example credentials file
+│   ├── secrets.h                 # WiFi credentials for the sensor node (gitignored)
+│   └── IndoorSensorClient.ino    # Code to be flashed onto the indoor sensor ESP8266
 ├── data/                     # Filesystem folder for FS upload
 │   └── index.html            # Place your custom UI here
 │   └── help.html             # Place your custom help page here
@@ -141,7 +151,7 @@ secrets.h
 **Custom UI:** Serve your own `index.html` from the ESP8266 filesystem (LittleFS).
 
 **How to switch:**
-1. In `AndyAttticFanControl.ino`, set:
+1. In `AttticFanControl.ino`, set:
 	```cpp
 	#define USE_FS_WEBUI 1
 	``` 
@@ -174,7 +184,7 @@ This packs the contents of the `data/` folder into a `filesystem.bin` file.
 
 ### Step 2: Change the Firmware Flag
 
-In `AndyAtticFanControl.ino`, change the flag to `1` to tell the firmware to use the files from the filesystem:
+In `AtticFanControl.ino`, change the flag to `1` to tell the firmware to use the files from the filesystem:
 ```cpp
 #define USE_FS_WEBUI 1
 ```
@@ -260,8 +270,73 @@ The controller exposes several API endpoints for programmatic control and integr
 
 ---
 
+## 🏠 Indoor Sensor Integration
+
+This version adds support for multiple ESP8266-based indoor sensors that can report temperature and humidity data to the main attic fan controller via HTTP POST requests.
+
+### Features
+
+- **Multiple Sensor Support**: Register up to 10 indoor sensors with unique identifiers
+- **Automatic Registration**: Sensors automatically register themselves when they start reporting data
+- **Data Validation**: Temperature and humidity values are validated for reasonable ranges
+- **Timeout Management**: Inactive sensors are automatically removed after 30 minutes
+- **REST API**: Full API for sensor management and data retrieval
+- **Web UI Integration**: Indoor sensor data displayed in the main controller's status
+- **MQTT Support**: Indoor sensor data can be published to MQTT for Home Assistant integration
+
+### API Endpoints
+
+- **`POST /indoor_sensors/data`**: Submit sensor data
+  - Required JSON fields: `sensorId`, `name`, `temperature` (°F), `humidity` (%)
+  - Example: `{"sensorId": "sensor1", "name": "Living Room", "temperature": 72.5, "humidity": 45.2}`
+
+- **`GET /indoor_sensors`**: Get all registered sensors and their data
+  - Returns sensor list, count, and average temperature/humidity
+
+- **`DELETE /indoor_sensors/{sensorId}`**: Remove a specific sensor
+
+### Indoor Sensor Setup
+
+1. **Hardware**: Use an ESP8266 board (NodeMCU, Wemos D1 Mini) with:
+   - SHT21, SHT20, or BME280 temperature/humidity sensor
+   - I2C connections (SDA/SCL pins)
+
+2. **Software**: Open the `IndoorSensorClient/IndoorSensorClient.ino` sketch in the Arduino IDE. This is a separate sketch from the main controller.
+   - In the `IndoorSensorClient` folder, copy `secrets_example.h` to a new file named `secrets.h` and add your WiFi `ssid` and `password`.
+   - In `IndoorSensorClient.ino`, configure a unique `SENSOR_ID` and `SENSOR_NAME` for the new device.
+   - The sensor will automatically try to find the main controller on your network using its mDNS name (`AtticFan.local`).
+   - (Optional) If your network has trouble with mDNS, you can update the `FALLBACK_CONTROLLER_IP` in the sketch.
+   - Upload to the ESP8266 board for your indoor sensor.
+
+3. **Configuration**: 
+   - Sensors automatically register when they start sending data
+   - No manual configuration needed on the main controller
+   - Enable/disable indoor sensors in the main controller's config
+
+### Example Indoor Sensor Configuration
+
+```cpp
+// In IndoorSensorClient.ino - the IP is now found automatically!
+const String SENSOR_ID = "bedroom_01";        // Unique identifier
+const String SENSOR_NAME = "Master Bedroom";  // Display name
+const unsigned long POST_INTERVAL = 30000;    // Send every 30 seconds
+```
+
+### Integration with Fan Logic
+
+While the current implementation focuses on data collection and display, indoor sensor data can be used for future enhancements like:
+- Whole-house fan control based on indoor/outdoor temperature differential
+- Humidity-based ventilation control
+- Zone-specific climate monitoring
+- Smart scheduling based on occupancy patterns
+
+---
+
 🧠 Potential Future Plans
-- Add an indoor temperature sensor for more advanced climate control logic (e.g., whole-house fan).
+- ~~Add an indoor temperature sensor for more advanced climate control logic (e.g., whole-house fan).~~ ✅ **Implemented**
+- Advanced fan control logic using indoor sensor data
+- Sensor discovery and auto-configuration protocol
+- Mobile app for sensor management
 
 - Always test with low-voltage loads before switching high-power fans.
 - Use proper isolation and protection when working with AC

@@ -145,7 +145,25 @@ async function fetchAndRenderHistory() {
   const now=Date.now(), pad=n=>(n<10?'0':'')+n, fmt=t=>{const d=new Date(t);return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`};
   const rows=[]; for(let i=0;i<96;i++){const t=now-(95-i)*15*60*1000; rows.push(`${fmt(t)},95,92,40,0`);} const mockHistory="timestamp,attic_temp,outdoor_temp,attic_humidity,fan_on\n"+rows.join("\n");
   const mockWeather={currentIcon:"☀️",currentTemp:72.4,currentHumidity:53,forecast:[{dayOfWeek:(new Date()).getDay(),icon:"⛅️",max:83,min:60},{dayOfWeek:(new Date(Date.now()+86400000)).getDay(),icon:"☀️",max:88,min:60},{dayOfWeek:(new Date(Date.now()+2*86400000)).getDay(),icon:"☀️",max:91,min:62}]};
-  const getMockStatus = () => {const now=Date.now(),inDelay=(__timerStart>0&&now<__timerStart&&__timerEnd>0),inRun=(__timerStart>0&&now>=__timerStart&&now<__timerEnd),remaining=Math.max(0,Math.floor(((__timerEnd>0?__timerEnd:0)-now)/1000));const fanOnNow=inRun?true:__fanOn;return{firmwareVersion:"v0.0.0-demo",atticTemp:95,atticHumidity:40,outdoorTemp:92,fanOn:fanOnNow,fanMode:__fanMode,timerActive:(__timerEnd>0&&(inDelay||inRun)),timerRemainingSec:remaining};}
+  const getMockStatus = () => {
+    const now=Date.now(),inDelay=(__timerStart>0&&now<__timerStart&&__timerEnd>0),inRun=(__timerStart>0&&now>=__timerStart&&now<__timerEnd),remaining=Math.max(0,Math.floor(((__timerEnd>0?__timerEnd:0)-now)/1000));
+    const fanOnNow=inRun?true:__fanOn;
+    return {
+      firmwareVersion:"v0.0.0-demo",atticTemp:95,atticHumidity:40,outdoorTemp:92,fanOn:fanOnNow,fanMode:__fanMode,timerActive:(__timerEnd>0&&(inDelay||inRun)),timerRemainingSec:remaining,
+      // --- Added for indoor sensor testing ---
+      indoorSensorsEnabled: true,
+      indoorSensorCount: 2,
+      avgIndoorTemp: '72.2',
+      avgIndoorHumidity: '45.3'
+    };
+  }
+  const mockIndoorSensors = {
+      "sensors": [
+          { "sensorId": "living_room_01", "name": "Living Room", "temperature": "72.5", "humidity": "45.1", "ipAddress": "192.168.1.150", "secondsSinceUpdate": 25 },
+          { "sensorId": "bedroom_01", "name": "Master Bedroom", "temperature": "70.2", "humidity": "48.9", "ipAddress": "192.168.1.151", "secondsSinceUpdate": 45 },
+          { "sensorId": "office_01", "name": "Office", "temperature": "73.8", "humidity": "42.0", "ipAddress": "192.168.1.152", "secondsSinceUpdate": 310 }
+      ], "count": 3, "averageTemperature": "72.2", "averageHumidity": "45.3"
+  };
   const F=window.fetch.bind(window);
   window.fetch = (input,init) => {
     try {
@@ -158,6 +176,7 @@ async function fetchAndRenderHistory() {
       if (/^\/fan\?state=off\b/.test(full)) { __fanOn = false; __fanMode = 'MANUAL'; return Promise.resolve(new Response('', { status: 200 })); }
       if (/^\/fan\?state=auto\b/.test(full)) { __fanMode = 'AUTO'; return Promise.resolve(new Response('', { status: 200 })); }
       if (full === '/status') return Promise.resolve(new Response(JSON.stringify(getMockStatus()), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+      if (full === '/indoor_sensors') return Promise.resolve(new Response(JSON.stringify(mockIndoorSensors), { status: 200, headers: { 'Content-Type': 'application/json' } }));
       if (full === '/config' && method === 'GET') return Promise.resolve(new Response(JSON.stringify(mockConfig), { status: 200, headers: { 'Content-Type': 'application/json' } }));
       if (full === '/config' && method === 'POST') {
         try {
@@ -233,6 +252,7 @@ function buildConfigPayload(fields) {
   return payload;
 }
 
+let allIndoorSensors = []; // Cache for modal
 function updateSensorData() {
   if (testMode) {
     return;
@@ -279,6 +299,10 @@ function updateSensorData() {
   const manualOffBtn = document.getElementById("manualOffBtn");
   if (manualOnBtn) manualOnBtn.disabled = fanOn;
   if (manualOffBtn) manualOffBtn.disabled = !fanOn;
+      } else {
+        // If not in manual mode, disable all manual buttons
+        if (manualOnBtn) manualOnBtn.disabled = true;
+        if (manualOffBtn) manualOffBtn.disabled = true;
       }
     })
     .catch(() => {
@@ -287,6 +311,51 @@ function updateSensorData() {
       document.getElementById("atticHumidity").textContent = "--";
       document.getElementById("outdoorTemp").textContent = "--";
       document.getElementById("currentMode").textContent = "--";
+    });
+
+  // Fetch and handle indoor sensor display logic
+  fetch("/indoor_sensors")
+    .then(res => res.json())
+    .then(data => {
+      allIndoorSensors = data.sensors || []; // Cache for modal
+      const count = data.count || 0;
+
+      const avgDisplay = document.getElementById('indoorSensorDisplay');
+      const sensor1Display = document.getElementById('indoorSensor1');
+      const sensor2Display = document.getElementById('indoorSensor2');
+
+      // Hide all first
+      if (avgDisplay) avgDisplay.style.display = 'none';
+      if (sensor1Display) sensor1Display.style.display = 'none';
+      if (sensor2Display) sensor2Display.style.display = 'none';
+
+      if (count > 2) {
+        // Show average card
+        if (avgDisplay) avgDisplay.style.display = 'block';
+        document.getElementById('avgIndoorTemp').textContent = data.averageTemperature || '--';
+        document.getElementById('avgIndoorHumidity').textContent = data.averageHumidity || '--';
+      } else if (count === 2) {
+        // Show two individual cards
+        if (sensor1Display) sensor1Display.style.display = 'block';
+        document.getElementById('indoorSensor1Name').textContent = data.sensors[0].name;
+        document.getElementById('indoorSensor1Temp').textContent = data.sensors[0].temperature;
+        document.getElementById('indoorSensor1Humidity').textContent = data.sensors[0].humidity;
+
+        if (sensor2Display) sensor2Display.style.display = 'block';
+        document.getElementById('indoorSensor2Name').textContent = data.sensors[1].name;
+        document.getElementById('indoorSensor2Temp').textContent = data.sensors[1].temperature;
+        document.getElementById('indoorSensor2Humidity').textContent = data.sensors[1].humidity;
+      } else if (count === 1) {
+        // Show one individual card
+        if (sensor1Display) sensor1Display.style.display = 'block';
+        document.getElementById('indoorSensor1Name').textContent = data.sensors[0].name;
+        document.getElementById('indoorSensor1Temp').textContent = data.sensors[0].temperature;
+        document.getElementById('indoorSensor1Humidity').textContent = data.sensors[0].humidity;
+      }
+    })
+    .catch(err => {
+      debugError("Failed to fetch indoor sensors:", err);
+      allIndoorSensors = [];
     });
 }
 function updateWeatherData() {
@@ -528,6 +597,33 @@ function setSliderInteraction(isInteracting) {
   // The flag is reset only when "Update Temps" is clicked successfully.
   isInteractingWithSlider = isInteracting;
 }
+function openIndoorSensorsModal(event) {
+  if (event) event.preventDefault();
+  const listEl = document.getElementById('indoorSensorsList');
+  if (!listEl) return;
+
+  if (allIndoorSensors.length > 0) {
+    listEl.innerHTML = allIndoorSensors.map(sensor => `
+      <div class="sensor-modal-item">
+        <div class="sensor-modal-name">${sensor.name}</div>
+        <div class="sensor-modal-data">
+          <span>${sensor.temperature}°F</span> / <span>${sensor.humidity}%</span>
+        </div>
+      </div>
+    `).join('');
+  } else {
+    listEl.innerHTML = '<p>No indoor sensor data available.</p>';
+  }
+
+  document.getElementById('indoorSensorsModal').style.display = 'block';
+}
+function closeIndoorSensorsModal() {
+  document.getElementById('indoorSensorsModal').style.display = 'none';
+}
+// Make functions globally available for onclick handlers
+window.openIndoorSensorsModal = openIndoorSensorsModal;
+window.closeIndoorSensorsModal = closeIndoorSensorsModal;
+
 function openTimerModal() {
   document.getElementById('timerModal').style.display = 'block';
 }
@@ -647,7 +743,8 @@ async function initializeApp() {
 }
 // Close modal if user clicks outside of it
 window.onclick = function(event) {
-  const modal = document.getElementById('timerModal');
+  const modal = document.getElementById('timerModal'); // Existing timer modal
+  const sensorsModal = document.getElementById('indoorSensorsModal');
   if (event.target === modal) {
     modal.style.display = "none";
   }
