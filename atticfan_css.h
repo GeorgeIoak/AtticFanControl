@@ -84,7 +84,7 @@ h2 {
   width: 100%;
 }
 .top-layout-grid{display:grid;grid-template-columns:250px minmax(0, 1fr);gap:20px;margin-bottom:20px;align-items:stretch}
-.sensor-column{display:flex;flex-direction:column;gap:20px;justify-content:space-between}
+.sensor-column{display:flex;flex-direction:column;gap:20px;justify-content:flex-start}
 .control-column{display:flex}
 
 /* fill the right column card */
@@ -285,6 +285,18 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 .modal .timer-options { margin-top: 15px; }
 .modal .timer-options select { padding: 5px; }
 .modal .timer-actions { margin-top: 20px; }
+
+/* Styles for the indoor sensor list modal */
+#indoorSensorsList {
+  max-height: 40vh;
+  overflow-y: auto;
+}
+.sensor-modal-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 5px;
+  border-bottom: 1px solid var(--border-light);
+}
 
 /* ---------- Footer ---------- */
 .app-footer { margin-top: 2rem; padding: 0.75rem 0; text-align: center; opacity: 0.8; }
