@@ -300,15 +300,15 @@ void publishIndoorSensorData() {
             doc["value"] = indoorSensors[i].temperature;
             doc["timestamp"] = indoorSensors[i].lastUpdate;
             serializeJson(doc, payloadBuffer);
-            snprintf(topicBuffer, sizeof(topicBuffer), "%s/indoor_sensor/%s/temperature/state", 
-                     baseTopic, indoorSensors[i].sensorId.c_str());
+            snprintf(topicBuffer, sizeof(topicBuffer), "indoor_sensor/%s/temperature/state", 
+                     indoorSensors[i].sensorId.c_str());
             mqttClient.publish(topicBuffer, payloadBuffer, true);
             
             // Humidity sensor
             doc["value"] = indoorSensors[i].humidity;
             serializeJson(doc, payloadBuffer);
-            snprintf(topicBuffer, sizeof(topicBuffer), "%s/indoor_sensor/%s/humidity/state", 
-                     baseTopic, indoorSensors[i].sensorId.c_str());
+            snprintf(topicBuffer, sizeof(topicBuffer), "indoor_sensor/%s/humidity/state", 
+                     indoorSensors[i].sensorId.c_str());
             mqttClient.publish(topicBuffer, payloadBuffer, true);
         }
     }
@@ -360,7 +360,7 @@ void publishIndoorSensorDiscovery() {
             // Temperature sensor discovery
             doc["name"] = indoorSensors[i].name + " Temperature";
             doc["unique_id"] = String("atticfan_indoor_") + indoorSensors[i].sensorId + "_temp";
-            doc["state_topic"] = String(baseTopic) + "/indoor_sensor/" + indoorSensors[i].sensorId + "/temperature/state";
+            doc["state_topic"] = "indoor_sensor/" + indoorSensors[i].sensorId + "/temperature/state";
             doc["value_template"] = "{{ value_json.value }}";
             doc["unit_of_measurement"] = "°F";
             doc["device_class"] = "temperature";
@@ -381,7 +381,7 @@ void publishIndoorSensorDiscovery() {
             // Humidity sensor discovery
             doc["name"] = indoorSensors[i].name + " Humidity";
             doc["unique_id"] = String("atticfan_indoor_") + indoorSensors[i].sensorId + "_humidity";
-            doc["state_topic"] = String(baseTopic) + "/indoor_sensor/" + indoorSensors[i].sensorId + "/humidity/state";
+            doc["state_topic"] = "indoor_sensor/" + indoorSensors[i].sensorId + "/humidity/state";
             doc["unit_of_measurement"] = "%";
             doc["device_class"] = "humidity";
             
