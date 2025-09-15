@@ -20,23 +20,30 @@ This project lets you control an attic fan using a web interface hosted on an ES
     - [Wi-Fi Credentials](#wi-fi-credentials)
   - [🖥️ Web UI Options](#️-web-ui-options)
   - [🚀 Deploying the Filesystem UI](#-deploying-the-filesystem-ui)
-    - [Step 1: Build the Filesystem Image](#step-1-build-the-filesystem-image)
-    - [Step 2: Change the Firmware Flag](#step-2-change-the-firmware-flag)
+    - [Step 1: Change the Firmware Flag](#step-1-change-the-firmware-flag)
     - [Step 3: Upload Files to the Device](#step-3-upload-files-to-the-device)
       - [Method A: OTA Upload (Recommended for Developers)](#method-a-ota-upload-recommended-for-developers)
       - [Method B: OTA Upload (Web UI Only)](#method-b-ota-upload-web-ui-only)
       - [Method C: Wired Upload (Initial Flash or Recovery)](#method-c-wired-upload-initial-flash-or-recovery)
   - [API Reference](#api-reference)
+    - [Main Control \& Status](#main-control--status)
+    - [Configuration](#configuration)
+    - [Data, Logs \& Weather](#data-logs--weather)
+    - [System \& Maintenance](#system--maintenance)
+    - [Test \& Development Endpoints](#test--development-endpoints)
   - [🏠 Indoor Sensor Integration](#-indoor-sensor-integration)
     - [Features](#features)
     - [API Endpoints](#api-endpoints)
     - [Indoor Sensor Setup](#indoor-sensor-setup)
     - [Example Indoor Sensor Configuration](#example-indoor-sensor-configuration)
     - [Integration with Fan Logic](#integration-with-fan-logic)
+  - [🧠 Potential Future Plans](#-potential-future-plans)
+  - [⚠️ Disclaimer](#️-disclaimer)
 
 ## ✨ Features
 
-  - Real-time sensor data display for attic, outdoor, and **indoor sensors** (with modal view and averages).
+- **Web Interface:**
+  - Real-time sensor data display for attic, outdoor, and **indoor sensors** (with modal view).
   - Auto/Manual modes with dedicated controls.
   - Animated fan icon that spins to show the fan's state.
   - A configuration form to adjust temperature thresholds and advanced options on-the-fly.
@@ -59,63 +66,45 @@ This project lets you control an attic fan using a web interface hosted on an ES
   - Non-blocking WiFi connection with progressive backoff retries.
   - Automatic fallback to Access Point (AP) mode if WiFi connection fails, allowing for configuration and recovery.
   - mDNS support for easy access via a local hostname (e.g., `http://AtticFan.local`).
-  - Non-blocking WiFi connection with progressive backoff retries.
-  - Automatic fallback to Access Point (AP) mode if WiFi connection fails, allowing for configuration and recovery.
-  - mDNS support for easy access via a local hostname (e.g., `http://AtticFan.local`).
   - **OTA firmware and filesystem updates** via web UI or Arduino IDE.
   - **MQTT integration** with Home Assistant auto-discovery (main fan, mode, all sensors, and all indoor sensors).
-  - Optional Test Panel in the UI to simulate sensor values and test fan logic.
-  - History chart and CSV log can be tested without hardware.
-  - **Test Panel**: Simulate sensor values and test fan logic without hardware.
-  - History chart and CSV log can be tested without hardware.
   - **Persistent diagnostics log** (`/diagnostics.log`) records errors and warnings for easy troubleshooting.
-  - Download and clear diagnostics log from the web UI.
 
 ```text
-AtticFanControl/                  # Main project folder
-├── AtticFanControl.ino           # Main Arduino sketch for the fan controller
-├── webui_embedded.h              # Embedded web UI (if USE_FS_WEBUI is 0)
-├── help_page.h                   # Embedded help page (if USE_FS_WEBUI is 0)
-├── types.h                       # Shared type definitions (e.g., FanMode)
-├── config.h                      # EEPROM configuration management
-├── secrets.h                     # Wi-Fi credentials (excluded from repo)
-├── sensors.h                     # Sensor logic
-├── hardware.h                    # Hardware config and flags
-├── IndoorSensorClient/           # --- SEPARATE SKETCH for the Indoor Sensor Node ---
-│   ├── secrets_example.h         # Example credentials file
-│   ├── secrets.h                 # WiFi credentials for the sensor node (gitignored)
-│   └── IndoorSensorClient.ino    # Code to be flashed onto the indoor sensor ESP8266
-├── data/                     # Filesystem folder for FS upload
-│   └── index.html            # Place your custom UI here
-│   └── help.html             # Place your custom help page here
-
-├── ReadMe.md                 # This file
-├── embed_html.py             # Script to embed HTML/JS/CSS/binary files as C headers for ESP8266/ESP32
-├── manage_ui.py              # Script to automate embedding, watching, and building the filesystem
-├── test_indoor_sensors.py    # Script to test the indoor sensor API endpoints
-└── .gitignore                # Prevents secrets from being committed
----
-
-## Project Scripts & Utilities
-
-- **embed_html.py**: Embeds HTML, JS, CSS, or binary files (e.g., images) as C header files for use in ESP8266/ESP32 firmware. Supports both plain and gzipped output, and can generate HTTP handler helpers. Used internally by `manage_ui.py`.
-  - Example usage:
-    ```sh
-    python3 embed_html.py data/index.html webui_embedded.h --var-name EMBEDDED_WEBUI --func-name handleEmbeddedWebUI
-    ```
-
-- **manage_ui.py**: Automates embedding of all web UI files and assets. Can update headers, watch for changes, and build the LittleFS filesystem image.
-  - Usage:
-    - `python3 manage_ui.py update` — Regenerate all embedded headers
-    - `python3 manage_ui.py watch` — Watch for changes and auto-update headers
-    - `python3 manage_ui.py buildfs` — Build the `filesystem.bin` image from `/data`
-
-- **test_indoor_sensors.py**: Simulates indoor sensor devices by sending test data to the controller's REST API. Useful for development and integration testing.
-  - Usage:
-    ```sh
-    python3 test_indoor_sensors.py [controller_ip]
-    ```
-    If no IP is provided, defaults to `192.168.1.100`.
+AtticFanControl/
+├── AtticFanControl.ino           # Main Arduino sketch.
+├── hardware.h                    # Pin definitions, hardware flags (e.g., USE_FS_WEBUI).
+├── secrets.h                     # WiFi, OTA, and MQTT credentials (gitignored).
+├── config.h                      # Configuration struct and EEPROM management.
+├── types.h                       # Shared type definitions (e.g., FanMode).
+├── sensors.h                     # Logic for reading main attic/outdoor sensors.
+├── indoor_sensors.h              # Logic for managing remote indoor sensors.
+├── history.h                     # Manages writing to the history.csv log.
+├── diagnostics.h                 # Manages writing to the diagnostics.log.
+├── weather.h                     # Fetches and caches weather forecast data.
+├── web_endpoints.h               # All web server endpoint handlers.
+├── webui_embedded.h              # Embedded main UI (used if USE_FS_WEBUI = 0).
+├── help_page.h                   # Embedded help page (used if USE_FS_WEBUI = 0).
+├── atticfan_js.h                 # Embedded main JavaScript (used if USE_FS_WEBUI = 0).
+├── atticfan_css.h                # Embedded main CSS (used if USE_FS_WEBUI = 0).
+├── favicon_ico.h                 # Embedded .ico file (used if USE_FS_WEBUI = 0).
+├── favicon_png.h                 # Embedded .png file (used if USE_FS_WEBUI = 0).
+│
+├── data/                         # Source files for the rich web UI (LittleFS).
+│   ├── index.html                # Main web UI page.
+│   ├── help.html                 # Help documentation page.
+│   ├── atticfan.css              # Main stylesheet.
+│   ├── atticfan.js               # Main JavaScript logic.
+│   ├── favicon.ico               # Favicon for browsers.
+│   └── favicon.png               # Favicon for modern devices.
+│
+├── IndoorSensorClient/           # --- SEPARATE SKETCH for an Indoor Sensor Node ---
+│   ├── IndoorSensorClient.ino    # Code to be flashed onto an indoor sensor ESP8266.
+│   └── secrets.h                 # WiFi credentials for the sensor node (gitignored).
+│
+├── manage_ui.py                  # Python script to build filesystem and embed UI files.
+├── test_indoor_sensors.py        # Python script to test the indoor sensor API.
+└── embed_html.py                 # Helper script used by manage_ui.py.
 ```
 
 ---
@@ -124,27 +113,26 @@ AtticFanControl/                  # Main project folder
 
 Install these libraries via Arduino IDE > Tools > Manage Libraries:
 
-| Library Name        | Author / Source      | Purpose                                 |
-|---------------------|---------------------|------------------------------------------|
-| [ElegantOTA](https://github.com/ayushsharma82/ElegantOTA)          | Ayush Sharma        | Web-based firmware updates               |
-| [DFRobot_SHT20](https://github.com/DFRobot/DFRobot_SHT20)       | DFRobot             | Read temperature & humidity from SHT20/SHT21 |
-| [OneWire](https://github.com/PaulStoffregen/OneWire)             | Paul Stoffregen     | Communicate with DS18B20                 |
-| [ArduinoJson](https://arduinojson.org/)         | Benoit Blanchon     | Efficient JSON handling                  |
-| [PubSubClient](https://github.com/knolleary/pubsubclient)      | Nick O'Leary        | MQTT client for integration              |
-| [DallasTemperature](https://github.com/milesburton/Arduino-Temperature-Control-Library)   | Miles Burton        | High-level DS18B20 interface             |
+| Library                                                                                     | Author            | Notes                                    |
+| ------------------------------------------------------------------------------------------- | ----------------- | ---------------------------------------- |
+| [ArduinoJson](https://github.com/bblanchon/ArduinoJson)                                     | Benoit Blanchon   | Core dependency for API communication.   |
+| [ElegantOTA](https://github.com/ayushsharma82/ElegantOTA)                                   | Ayush Sharma      | Core dependency for web-based updates.   |
+| [PubSubClient](https://github.com/knolleary/pubsubclient)                                   | Nick O'Leary      | Optional, for MQTT integration.          |
+| [DFRobot_SHT20](https://github.com/DFRobot/DFRobot_SHT20)                                   | DFRobot           | Optional, for SHT20/SHT21 attic sensor.  |
+| [OneWire](https://github.com/PaulStoffregen/OneWire)                                        | Paul Stoffregen   | Optional, for DS18B20 outdoor sensor.    |
+| [DallasTemperature](https://github.com/milesburton/Arduino-Temperature-Control-Library)     | Miles Burton      | Optional, for DS18B20 outdoor sensor.    |
 
 ### Software Setup
 
 - Arduino IDE with ESP8266 board support
 - Add this URL to **Arduino > Preferences > Additional Board Manager URLs**:
 
-<http://arduino.esp8266.com/stable/package_esp8266com_index.json>
+[http://arduino.esp8266.com/stable/package_esp8266com_index.json](http://arduino.esp8266.com/stable/package_esp8266com_index.json)
 
 - Use ESP8266 core v3.1.2 or newer for full OTA compatibility
 
 - In **Tools > Flash Size**, select your board's memory size. For most NodeMCU/Wemos boards, this is **4MB**.
-- For the partition scheme, choose **`4MB (FS:2MB, OTA:~1019KB)`**. This is often the default and provides 2MB for the data log filesystem, which is ideal for long-term history.
-  - *Note: Older ESP8266 cores might name this `4M (1M LittleFS)`. If you choose that, you must adjust the `-s` parameter in the `mklittlefs` command below to `1024000`.*
+- For the partition scheme, choose **`4MB (FS:2MB, OTA:~1019KB)`**. This provides 2MB for the filesystem, which is ideal for long-term history logging.
 
 ### Wi-Fi Credentials
 
@@ -160,6 +148,11 @@ const char* password = "YOUR_PASSWORD";
 const char* ota_user = "admin"; // Default username for OTA updates
 const char* ota_password = "your_secure_password"; // Default password for OTA updates
 
+// --- Weather Configuration (optional) ---
+// Coordinates for Open-Meteo API. Find yours at https://www.latlong.net/
+#define WEATHER_LATITUDE 38.72
+#define WEATHER_LONGITUDE -121.36
+
 // --- MQTT Configuration (optional) ---
 const char* mqtt_broker = "YOUR_MQTT_BROKER_IP";
 const int mqtt_port = 1883;
@@ -169,7 +162,7 @@ const char* mqtt_password = "YOUR_MQTT_PASSWORD";
 
 Add `secrets.h` to your `.gitignore` file to ensure it is not committed:
 
-```
+```text
 secrets.h
 ```
 
@@ -177,53 +170,36 @@ secrets.h
 
 ## 🖥️ Web UI Options
 
-**Default:** Uses the embedded web UI (`webui_embedded.h`).
+This project offers two web interface modes, configured in `hardware.h`:
 
-**Custom UI:** Serve your own `index.html` from the ESP8266 filesystem (LittleFS).
+1. **Lightweight Embedded UI (Default)**
+    - **How it works:** The UI is compiled directly into the firmware from header files (`webui_embedded.h`, etc.).
+    - **Pros:** Simple to flash; no filesystem management required.
+    - **Cons:** Lacks advanced features like the history chart.
+    - **To use:** In `hardware.h`, set `#define USE_FS_WEBUI 0`.
 
-**How to switch:**
+2. **Full-Featured Filesystem UI (Recommended)**
+    - **How it works:** The UI is loaded from files (`index.html`, `atticfan.js`, etc.) stored on the device's LittleFS filesystem.
+    - **Pros:** Provides the complete user experience with the history chart, help pages, and all assets.
+    - **Cons:** Requires an extra step to build and upload the filesystem image.
+    - **To use:** In `hardware.h`, set `#define USE_FS_WEBUI 1` and follow the deployment steps in the next section.
 
-1. In `AtticFanControl.ino`, set:
-
- ```cpp
- #define USE_FS_WEBUI 1
- ```
-
-2. Place your `index.html` and `help.html` files in the `data/` folder.
-3. Upload the filesystem:
-
-- Use the command-line method described in the next section. **Note:** The old Arduino IDE 1.x filesystem plugin is deprecated and not supported in modern IDEs (2.x and newer).
-
-4. On reboot, the device will serve `index.html` if present.
-
-If `USE_FS_WEBUI` is set to `0`, the embedded UI will be used.
+> **Note:** The `manage_ui.py` script automatically keeps the embedded C++ header files (`.h`) synchronized with the source files in the `data/` directory. This ensures that even the lightweight UI uses the latest code, just without the filesystem-dependent features.
 
 ---
 
 ## 🚀 Deploying the Filesystem UI
 
-This project can serve a rich web interface from its onboard flash memory (LittleFS). This is required for features like the history chart.
-
-**The Golden Rule:** The filesystem (`filesystem.bin`) must be uploaded to the device *before* the firmware that uses it (`USE_FS_WEBUI = 1`).
+To use the full-featured UI with the history chart, you must build the filesystem image and upload it to the device.
 
 > **Note on OTA Credentials:**
 >
 > - **Arduino IDE (Network Port):** Prompts for a **password only**. Use the `ota_password` from your `secrets.h` file.
 > - **Web UI (ElegantOTA):** Prompts for a **username and password**. Use `ota_user` and `ota_password` from `secrets.h`.
 
-### Step 1: Build the Filesystem Image
+### Step 1: Change the Firmware Flag
 
-No matter which upload method you choose, you must first create the filesystem binary. From a terminal in the project's root directory, run:
-
-```bash
-mklittlefs -c data -b 4096 -p 256 -s 2048000 ./filesystem.bin
-```
-
-This packs the contents of the `data/` folder into a `filesystem.bin` file.
-
-### Step 2: Change the Firmware Flag
-
-In `AtticFanControl.ino`, change the flag to `1` to tell the firmware to use the files from the filesystem:
+In `hardware.h`, change the flag to `1` to tell the firmware to use the files from the filesystem:
 
 ```cpp
 #define USE_FS_WEBUI 1
@@ -275,62 +251,47 @@ Use this method for the very first time you program a blank device.
 
 The controller exposes several API endpoints for programmatic control, integration, and diagnostics.
 
-- **`GET /status`**
-  - Returns a JSON object with the current state of all sensors, the fan, and the controller mode.
-  - *Example Response:* `{ "firmwareVersion": "0.95", "atticTemp": "92.1", ..., "fanOn": true, "fanMode": "MANUAL", "fanSubMode": "TIMED", "timerActive": true, ... }`
+### Main Control & Status
 
-- **`GET /config`**
-  - Returns a JSON object with all current configuration settings.
-  - *Example Response:* `{ "fanOnTemp": 90, "fanDeltaTemp": 5, "preCoolingEnabled": true, ... }`
+- **`GET /status`**: Returns a JSON object with the current state of all sensors, the fan, and the controller mode.
+- **`GET /fan?state=on|off|auto|manual|ping`**: Provides basic fan and mode control.
+  - `on`: Turns the fan on and enters `MANUAL_ON` mode.
+    - `off`: Turns the fan off and enters `MANUAL_OFF` mode.
+    - `auto`: Switches the controller to `AUTO` mode.
+    - `manual`: Switches to `MANUAL` mode (preserves current fan state).
+    - `ping`: Returns `pong` (for connectivity testing).
+- **`POST /fan`**: Starts a manual timed run.
+  - *Example Body:* `{ "action": "start_timed", "delay": 5, "duration": 60, "postAction": "revert_to_auto" }`
+  - `postAction` can be `"revert_to_auto"` or `"stay_manual"`.
 
-- **`POST /config`**
-  - Sets new configuration values. The body must be a JSON object containing one or more keys from the `GET /config` response.
+### Configuration
+
+- **`GET /config`**: Returns a JSON object with all current configuration settings.
+- **`POST /config`**: Sets new configuration values. The body must be a JSON object containing one or more keys from the `GET /config` response.
   - *Example with curl:* `curl -X POST -d '{"fanOnTemp":92.5}' http://<ip>/config`
 
-- **`GET /weather`**
-  - Returns a JSON object with the current weather conditions and a 3-day forecast.
-  - *Example Response:* `{ "currentTemp": "75.3", "currentIcon": "☀️", "forecast": [...] }`
+### Data, Logs & Weather
 
-- **`GET /fan?state=on|off|auto|manual|ping`**
-  - Provides basic fan and mode control:
-    - `on`: Turns the fan on and enters MANUAL mode.
-    - `off`: Turns the fan off and enters MANUAL mode.
-    - `auto`: Switches the controller to AUTO mode.
-    - `manual`: Switches to MANUAL mode (preserves current fan state).
-    - `ping`: Returns `pong` (for connectivity testing).
+- **`GET /weather`**: Returns a JSON object with the current weather conditions and a 3-day forecast.
+- **`GET /history.csv`**: Downloads the complete sensor history log as a CSV file.
+- **`GET /diagnostics`**: Downloads the persistent diagnostics log as plain text.
+- **`GET /clear_diagnostics`**: Clears the persistent diagnostics log file.
 
-- **`POST /fan`**
-  - Starts a manual timed run.
-  - *Example Body:* `{ "action": "start_timed", "delay": 5, "duration": 60, "postAction": "revert_to_auto" }`
+### System & Maintenance
 
-- **`GET /history.csv`**
-  - Downloads the complete sensor history log as a CSV file.
+- **`GET /restart`**: Triggers a software restart of the device.
+- **`GET /reset_config`**: Resets all configuration to defaults and restarts the device.
+- **`GET /help`**: Returns the help page (HTML).
+- **`GET /update_wrapper`**: Returns a wrapper page for the OTA update UI (HTML with an iframe).
 
-- **`GET /diagnostics`**
-  - Downloads the persistent diagnostics log as plain text.
+### Test & Development Endpoints
 
-- **`POST /clear_diagnostics`**
-  - Clears the persistent diagnostics log file.
-
-- **`GET /restart`**
-  - Triggers a software restart of the device.
-
-- **`GET /reset_config`**
-  - Resets all configuration to defaults and restarts the device.
-
-- **`GET /help`**
-  - Returns the help page (HTML).
-
-- **`GET /update_wrapper`**
-  - Returns a wrapper page for the OTA update UI (HTML with iframe).
-
-- **Test/Development Endpoints:**
-  - **`POST /test/set_temps?attic=...&outdoor=...`**: Set simulated sensor values (test mode only).
-  - **`POST /test/force_ap`**: Force the device into Access Point (AP) mode for WiFi recovery.
+- **`GET /test/set_temps?attic=...&outdoor=...`**: Set simulated sensor values (test mode only).
+- **`GET /test/force_ap`**: Force the device into Access Point (AP) mode for WiFi recovery.
 
 See the Indoor Sensor Integration section for `/indoor_sensors` API endpoints.
 
-----
+---
 
 ## 🏠 Indoor Sensor Integration
 
@@ -341,6 +302,7 @@ The Attic Fan Controller supports multiple ESP8266-based indoor sensors that rep
 - **Multiple Sensor Support**: Register up to 10 indoor sensors, each with a unique ID and name.
 - **Automatic Registration & Discovery**: Sensors register themselves automatically when they send data; no manual setup required on the controller.
 - **Web UI Integration**: Indoor sensor data (average and per-room) is displayed in the main controller's dashboard, with a modal for details.
+- **Web UI Integration**: Indoor sensor data is displayed on the main dashboard. A dedicated dashboard at `/indoor_sensors_dashboard.html` allows for viewing and managing all sensors.
 - **Timeout Management**: Inactive sensors are automatically removed after 30 minutes.
 - **Data Validation**: Sensor values are checked for reasonable ranges before being accepted.
 - **REST API**: Full API for submitting, listing, and removing sensors and their data.
@@ -363,15 +325,15 @@ The Attic Fan Controller supports multiple ESP8266-based indoor sensors that rep
 
 2. **Software**: Open the `IndoorSensorClient/IndoorSensorClient.ino` sketch in the Arduino IDE (separate from the main controller).
 
-  - Copy `secrets_example.h` to `secrets.h` and enter your WiFi credentials.
-  - Set a unique `SENSOR_ID` and `SENSOR_NAME` in the sketch for each device.
-  - By default, the sensor will auto-discover the main controller using mDNS (`AtticFan.local`). If mDNS fails, set `FALLBACK_CONTROLLER_IP` in the sketch.
-  - Upload the sketch to your ESP8266 indoor sensor.
+- Copy `secrets_example.h` to `secrets.h` and enter your WiFi credentials.
+- Set a unique `SENSOR_ID` and `SENSOR_NAME` in the sketch for each device.
+- By default, the sensor will auto-discover the main controller using mDNS (`AtticFan.local`). If mDNS fails, set `FALLBACK_CONTROLLER_IP` in the sketch.
+- Upload the sketch to your ESP8266 indoor sensor.
 
 3. **Configuration**:
 
-  - Sensors register automatically when they send data—no manual steps needed on the controller.
-  - Enable or disable indoor sensor support in the main controller's config (web UI > config panel).
+- Sensors register automatically when they send data—no manual steps needed on the controller.
+- Enable or disable indoor sensor support in the main controller's config (web UI > config panel).
 
 ### Example Indoor Sensor Configuration
 
@@ -393,13 +355,17 @@ Currently, indoor sensor data is collected, displayed, and published to MQTT/Hom
 
 ---
 
-🧠 Potential Future Plans
+## 🧠 Potential Future Plans
 
 - ~~Add an indoor temperature sensor for more advanced climate control logic (e.g., whole-house fan).~~ ✅ **Implemented**
 - Advanced fan control logic using indoor sensor data
 - Sensor discovery and auto-configuration protocol
 - Mobile app for sensor management
 
+---
+
+## ⚠️ Disclaimer
+
 - Always test with low-voltage loads before switching high-power fans.
-- Use proper isolation and protection when working with AC
-- Secure your device if exposed to public networks
+- Use proper isolation and protection when working with AC mains voltage.
+- Secure your device if it is exposed to public networks.
