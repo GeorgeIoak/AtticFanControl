@@ -135,7 +135,7 @@ Install these libraries via Arduino IDE > Tools > Manage Libraries:
 
 ### Software Setup
 
-- Arduino IDE with ESP8266 board support  
+- Arduino IDE with ESP8266 board support
 - Add this URL to **Arduino > Preferences > Additional Board Manager URLs**:
 
 <http://arduino.esp8266.com/stable/package_esp8266com_index.json>
@@ -183,7 +183,7 @@ secrets.h
 
 **How to switch:**
 
-1. In `AttticFanControl.ino`, set:
+1. In `AtticFanControl.ino`, set:
 
  ```cpp
  #define USE_FS_WEBUI 1
@@ -334,7 +334,6 @@ See the Indoor Sensor Integration section for `/indoor_sensors` API endpoints.
 
 ## 🏠 Indoor Sensor Integration
 
-
 The Attic Fan Controller supports multiple ESP8266-based indoor sensors that report temperature and humidity to the main controller via HTTP POST requests. Indoor sensors are auto-discovered and displayed in the web UI, and can be integrated with Home Assistant via MQTT auto-discovery.
 
 ### Features
@@ -382,7 +381,6 @@ const String SENSOR_ID = "bedroom_01";        // Unique identifier
 const String SENSOR_NAME = "Master Bedroom";  // Display name
 const unsigned long POST_INTERVAL = 30000;    // Send every 30 seconds
 ```
-
 
 ### Integration with Fan Logic
 
