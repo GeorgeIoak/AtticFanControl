@@ -16,12 +16,10 @@ This project lets you control an attic fan using a web interface hosted on an ES
   - [Table of Contents](#table-of-contents)
   - [✨ Features](#-features)
     - [`embed_html.py`](#embed_htmlpy)
-    - [Required Libraries](#required-libraries)
-    - [Software Setup](#software-setup)
-    - [Wi-Fi Credentials](#wi-fi-credentials)
-  - [🖥️ Web UI Options](#️-web-ui-options)
-  - [🚀 Deploying the Filesystem UI](#-deploying-the-filesystem-ui)
-    - [Step 1: Build the Filesystem Image](#step-1-build-the-filesystem-image)
+  - [Required Libraries](#required-libraries)
+  - [Software Setup](#software-setup)
+  - [Wi-Fi Credentials](#wi-fi-credentials)
+  - [📁 Project Structure](#-project-structure)
     - [Step 2: Change the Firmware Flag](#step-2-change-the-firmware-flag)
     - [Step 3: Upload Files to the Device](#step-3-upload-files-to-the-device)
       - [Method A: OTA Upload (Recommended for Developers)](#method-a-ota-upload-recommended-for-developers)
@@ -99,7 +97,7 @@ AtticFanControl/                  # Main project folder
 
 This project includes several Python scripts to simplify development and deployment.
 
-#### `manage_ui.py`
+### `manage_ui.py`
 
 This is the primary helper script for managing the web UI assets.
 
@@ -107,7 +105,7 @@ This is the primary helper script for managing the web UI assets.
 - **`python3 manage_ui.py watch`**: Watches the `data/` directory and automatically runs the `update` command whenever a file is changed. Ideal for live-editing the embedded UI.
 - **`python3 manage_ui.py buildfs`**: Packages the contents of the `data/` directory into a `filesystem.bin` image. This is required for deploying the **filesystem UI** (`USE_FS_WEBUI = 1`). See the Deploying the Filesystem UI section for more details.
 
-#### `test_indoor_sensors.py`
+### `test_indoor_sensors.py`
 
 Simulates indoor sensor devices by sending test data to the controller's REST API. This is useful for testing the indoor sensor integration without needing physical hardware.
 
@@ -121,9 +119,7 @@ python3 test_indoor_sensors.py [controller_ip]
 
 A lower-level utility script used by `manage_ui.py`. It embeds a single file (HTML, JS, CSS, or binary) into a C++ header file. You typically won't need to run this directly.
 
----
-
-### Required Libraries
+## Required Libraries
 
 Install these libraries via Arduino IDE > Tools > Manage Libraries:
 
@@ -136,7 +132,7 @@ Install these libraries via Arduino IDE > Tools > Manage Libraries:
 | [PubSubClient](https://github.com/knolleary/pubsubclient)      | Nick O'Leary        | MQTT client for integration              |
 | [DallasTemperature](https://github.com/milesburton/Arduino-Temperature-Control-Library)   | Miles Burton        | High-level DS18B20 interface             |
 
-### Software Setup
+## Software Setup
 
 - Arduino IDE with ESP8266 board support
 - Add this URL to **Arduino > Preferences > Additional Board Manager URLs**:
@@ -149,67 +145,34 @@ Install these libraries via Arduino IDE > Tools > Manage Libraries:
 - For the partition scheme, choose **`4MB (FS:2MB, OTA:~1019KB)`**. This is often the default and provides 2MB for the data log filesystem, which is ideal for long-term history.
   - *Note: The `manage_ui.py buildfs` script is pre-configured for this 2MB partition size. If you must use a different partition scheme (e.g., 1MB), you will need to edit the script.*
 
-### Wi-Fi Credentials
+## Wi-Fi Credentials
 
 Create a `secrets.h` file in the sketch directory with the following content. This file stores your sensitive information and is ignored by version control.
 
-```cpp
-#pragma once
-// WiFi Network
-const char* ssid = "YOUR_SSID";
-const char* password = "YOUR_PASSWORD";
-
-// OTA Update Credentials
-const char* ota_user = "admin"; // Default username for OTA updates
-const char* ota_password = "your_secure_password"; // Default password for OTA updates
-
-// --- MQTT Configuration (optional) ---
-const char* mqtt_broker = "YOUR_MQTT_BROKER_IP";
-const int mqtt_port = 1883;
-const char* mqtt_user = "YOUR_MQTT_USER";
-const char* mqtt_password = "YOUR_MQTT_PASSWORD";
-```
-
-Add `secrets.h` to your `.gitignore` file to ensure it is not committed:
+## 📁 Project Structure
 
 ```text
-secrets.h
-```
-
----
-
-## 🖥️ Web UI Options
-
-The project supports two modes for serving the web interface:
-
-1. **Embedded UI (Default):** The UI is compiled directly into the firmware from header files (e.g., `webui_embedded.h`). This is the default behavior when `USE_FS_WEBUI` is set to `0` in `AtticFanControl.ino`.
-2. **Filesystem UI:** The UI is served from files (`index.html`, `atticfan.css`, etc.) on the device's LittleFS filesystem. This mode is required for features like the history chart and is easier for web development.
-
-To switch to the Filesystem UI, set `#define USE_FS_WEBUI 1` in `AtticFanControl.ino` and follow the instructions in the **Deploying the Filesystem UI** section to build and upload the `data/` directory.
-
-> **Note:** The old Arduino IDE 1.x "ESP8266 LittleFS Data Upload" plugin is deprecated and not supported in modern IDEs (2.x and newer). Please use the script-based methods described in this document.
-
----
-
-## 🚀 Deploying the Filesystem UI
-
-This project can serve a rich web interface from its onboard flash memory (LittleFS). This is required for features like the history chart.
-
-**The Golden Rule:** When switching to the filesystem UI, you must upload the filesystem image to the device *before* you upload the firmware that is configured to use it.
-
-> **Note on OTA Credentials:**
->
-> - **Arduino IDE (Network Port):** Prompts for a **password only**. Use the `ota_password` from your `secrets.h` file.
-> - **Web UI (ElegantOTA):** Prompts for a **username and password**. Use `ota_user` and `ota_password` from `secrets.h`.
-
-### Step 1: Build the Filesystem Image
-
-This project includes a helper script to build the filesystem image safely. It automatically cleans temporary log files from the `data/` directory before packaging.
-
-From a terminal in the project's root directory, run:
-
-```bash
-python3 manage_ui.py buildfs
+AtticFanControl/
+├── AtticFanControl.ino           # Main Arduino sketch for the fan controller
+├── webui_embedded.h              # Embedded web UI (if USE_FS_WEBUI is 0)
+├── help_page.h                   # Embedded help page (if USE_FS_WEBUI is 0)
+├── types.h                       # Shared type definitions (e.g., FanMode)
+├── config.h                      # EEPROM configuration management
+├── secrets.h                     # Wi-Fi credentials (excluded from repo)
+├── sensors.h                     # Sensor logic
+├── hardware.h                    # Hardware config and flags
+├── IndoorSensorClient/           # --- SEPARATE SKETCH for the Indoor Sensor Node ---
+│   ├── secrets_example.h         # Example credentials file
+│   ├── secrets.h                 # WiFi credentials for the sensor node (gitignored)
+│   └── IndoorSensorClient.ino    # Code to be flashed onto the indoor sensor ESP8266
+├── data/                         # Filesystem folder for FS upload
+│   ├── index.html                # Place your custom UI here
+│   ├── help.html                 # Place your custom help page here
+├── ReadMe.md                     # This file
+├── embed_html.py                 # Script to embed HTML/JS/CSS/binary files as C headers for ESP8266/ESP32
+├── manage_ui.py                  # Script to automate embedding, watching, and building the filesystem
+├── test_indoor_sensors.py        # Script to test the indoor sensor API endpoints
+└── .gitignore                    # Prevents secrets from being committed
 ```
 
 This packs the contents of the `data/` folder into a `filesystem.bin` file.
@@ -321,7 +284,7 @@ The controller exposes several API endpoints for programmatic control, integrati
 
 - **`GET /test/force_ap`**: Forces the device into Access Point (AP) mode for WiFi recovery.
 
-----
+---
 
 ## 🏠 Indoor Sensor Integration
 
