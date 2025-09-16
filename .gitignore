@@ -1,2 +1,5 @@
 secrets.h
 IndoorSensorClient/secrets.h
+.markdownlint.json
+.vscode
+Arduino/AtticFanControl/.vscode
