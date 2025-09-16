@@ -1,4 +1,7 @@
 {
-    "MD012": false,
-    "MD013": false
+    "MD012": {
+        "maximum": 2
+    },
+    "MD013": false,
+    "no-inline-html": false
 }

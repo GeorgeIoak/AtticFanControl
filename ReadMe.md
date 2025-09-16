@@ -10,6 +10,10 @@
     - [2. Required Libraries](#2-required-libraries)
     - [3. Arduino IDE Configuration](#3-arduino-ide-configuration)
     - [4. Credentials Setup](#4-credentials-setup)
+  - [⚙️ Development \& Deployment](#️-development--deployment)
+    - [Project Scripts \& Utilities](#project-scripts--utilities)
+    - [`manage_ui.py`](#manage_uipy)
+    - [`test_indoor_sensors.py`](#test_indoor_sensorspy)
     - [`embed_html.py`](#embed_htmlpy)
   - [Required Libraries](#required-libraries)
     - [3. Arduino IDE Configuration](#3-arduino-ide-configuration-1)
@@ -41,6 +45,11 @@
 This project lets you control an attic fan using a web interface hosted on an ESP8266.
 
 
+<details open>
+<summary><b>Show / hide</b></summary>
+
+</details>
+
 ## ✨ Features
 
 - **Web Interface:**
@@ -65,6 +74,11 @@ This project lets you control an attic fan using a web interface hosted on an ES
   - Auto-discovers and displays data from up to 10 remote ESP8266-based indoor sensors.
   - Publishes indoor sensor data to MQTT for Home Assistant integration.
 - **MQTT & Home Assistant:** Full integration with MQTT for control and monitoring, including Home Assistant auto-discovery for all entities.
+<details open>
+<summary><b>Show / hide</b></summary>
+
+
+</details>
 - **Advanced Connectivity:**
 
 ## 🛠️ Setup and Installation
@@ -142,9 +156,14 @@ AtticFanControl/                  # Main project folder
 ├── ReadMe.md                 # This file
 ├── embed_html.py             # Script to embed HTML/JS/CSS/binary files as C headers for ESP8266/ESP32
 ├── manage_ui.py              # Script to automate embedding, watching, and building the filesystem
+<details>
+<summary><b>Show / hide</b></summary>
+
+
+</details>
 ├── test_indoor_sensors.py    # Script to test the indoor sensor API endpoints
 └── .gitignore                # Prevents secrets from being committed
----
+```
 
 ## ⚙️ Development & Deployment
 
@@ -166,6 +185,11 @@ Simulates indoor sensor devices by sending test data to the controller's REST AP
 
 ```bash
 python3 test_indoor_sensors.py [controller_ip]
+<details>
+<summary><b>Show / hide</b></summary>
+
+
+</details>
 ```
 
 ### `embed_html.py`
@@ -207,6 +231,11 @@ Create a `secrets.h` file in the main `AtticFanControl/` sketch directory. This 
 // --- WiFi Credentials ---
 #define WIFI_SSID "YourWiFi_SSID"
 #define WIFI_PASSWORD "YourWiFi_Password"
+<details>
+<summary><b>Show / hide</b></summary>
+
+
+</details>
 
 // --- MQTT Broker Details (optional) ---
 #define MQTT_BROKER "192.168.1.100"
@@ -281,6 +310,11 @@ This method is useful for updating a device without needing the Arduino IDE.
 ##### Method C: Wired Upload (Initial Flash or Recovery)
 
 Use this method for the very first time you program a blank device.
+<details>
+<summary><b>Show / hide</b></summary>
+
+
+</details>
 
 1. Connect the device to your computer via USB.
 2. **Upload Filesystem:** Upload the filesystem image using `esptool.py`. Replace `COM3` with your device's serial port. The flash address `0x200000` is the correct starting address for the filesystem on a 4MB board.
@@ -338,6 +372,11 @@ The controller exposes several API endpoints for programmatic control, integrati
   - *Required JSON fields:* `sensorId`, `name`, `temperature` (°F), `humidity` (%).
   - *Example Body:* `{ "sensorId": "bedroom_01", "name": "Master Bedroom", "temperature": 72.5, "humidity": 45.2 }`
 
+<details>
+<summary><b>Show / hide</b></summary>
+
+
+</details>
 - **`GET /indoor_sensors`**: Retrieves a list of all active indoor sensors, their data, and overall averages.
 
 - **`DELETE /indoor_sensors/{sensorId}`**: Removes a specific sensor from the controller's list.
@@ -387,6 +426,11 @@ The Attic Fan Controller supports multiple ESP8266-based indoor sensors that rep
 // In IndoorSensorClient.ino
 const String SENSOR_ID = "bedroom_01";        // Unique identifier
 const String SENSOR_NAME = "Master Bedroom";  // Display name
+<details>
+<summary><b>Show / hide</b></summary>
+
+
+</details>
 const unsigned long POST_INTERVAL = 30000;    // Send every 30 seconds
 ```
 
@@ -394,9 +438,15 @@ const unsigned long POST_INTERVAL = 30000;    // Send every 30 seconds
 
 Currently, indoor sensor data is collected, displayed, and published to MQTT/Home Assistant. Future firmware updates may use indoor sensor data for advanced automation, such as:
 
+<details>
+<summary><b>Show / hide</b></summary>
+
+
+</details>
 - Whole-house fan control based on indoor/outdoor temperature differential
 - Humidity-based ventilation control
 - Zone-specific climate monitoring
+
 - Smart scheduling based on occupancy patterns
 
 ---
