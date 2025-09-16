@@ -1,19 +1,9 @@
 # 🌀 Attic Fan Controller (ESP8266 + Web UI + OTA)
 
-**Minimum Requirements:**
-
-- ESP8266 board (NodeMCU, Wemos D1 Mini, etc.)
-- [ESP8266 core v3.1.2 or newer](http://arduino.esp8266.com/stable/package_esp8266com_index.json) for Arduino IDE
-- [Python 3](https://www.python.org/downloads/)
-- [mklittlefs](https://github.com/earlephilhower/mklittlefs/releases)
-- [esptool.py](https://docs.espressif.com/projects/esptool/en/latest/)
-
-This project lets you control an attic fan using a web interface hosted on an ESP8266.
-
-## Table of Contents
+## 🗂️ Table of Contents
 
 - [🌀 Attic Fan Controller (ESP8266 + Web UI + OTA)](#-attic-fan-controller-esp8266--web-ui--ota)
-  - [Table of Contents](#table-of-contents)
+  - [🗂️ Table of Contents](#️-table-of-contents)
   - [✨ Features](#-features)
     - [`embed_html.py`](#embed_htmlpy)
   - [Required Libraries](#required-libraries)
@@ -35,6 +25,17 @@ This project lets you control an attic fan using a web interface hosted on an ES
     - [Integration with Fan Logic](#integration-with-fan-logic)
   - [⚠️ Safety \& Disclaimers](#️-safety--disclaimers)
   - [🧠 Potential Future Plans](#-potential-future-plans)
+
+**Minimum Requirements:**
+
+- ESP8266 board (NodeMCU, Wemos D1 Mini, etc.)
+- [ESP8266 core v3.1.2 or newer](http://arduino.esp8266.com/stable/package_esp8266com_index.json) for Arduino IDE
+- [Python 3](https://www.python.org/downloads/)
+- [mklittlefs](https://github.com/earlephilhower/mklittlefs/releases)
+- [esptool.py](https://docs.espressif.com/projects/esptool/en/latest/)
+
+This project lets you control an attic fan using a web interface hosted on an ESP8266.
+
 
 ## ✨ Features
 
@@ -60,13 +61,7 @@ This project lets you control an attic fan using a web interface hosted on an ES
   - Auto-discovers and displays data from up to 10 remote ESP8266-based indoor sensors.
   - Publishes indoor sensor data to MQTT for Home Assistant integration.
 - **Advanced Connectivity:**
-  - Non-blocking WiFi connection with progressive backoff retries.
-  - Automatic fallback to Access Point (AP) mode if WiFi connection fails, allowing for configuration and recovery.
-  - mDNS support for easy access via a local hostname (e.g., `http://AtticFan.local`).
-  - **MQTT integration** with Home Assistant auto-discovery (main fan, mode, all sensors, and all indoor sensors).
-- **Development & Diagnostics:**
-  - **Test Panel**: Simulate sensor values and test fan logic without hardware.
-  - **Persistent diagnostics log** (`/diagnostics.log`) records errors and warnings for easy troubleshooting.
+
 
 ```text
 AtticFanControl/                  # Main project folder
