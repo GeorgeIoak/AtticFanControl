@@ -1,0 +1,245 @@
+#pragma once
+#include <pgmspace.h>
+
+// Auto-generated from indoor_sensors_dashboard.html. Do not edit by hand.
+// To define the chunked handler automatically, keep WEBUI_EMIT_STREAM_HELPER=1
+#ifndef WEBUI_EMIT_STREAM_HELPER
+#define WEBUI_EMIT_STREAM_HELPER 1
+#endif
+
+#undef F
+const char INDOOR_DASHBOARD_PAGE[] PROGMEM = R"EMB1(
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Indoor Sensors Dashboard</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="atticfan.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="icon" href="favicon.ico">
+</head>
+<body>
+    <div class="page-container">
+        <h1>🏠 Indoor Sensors Dashboard</h1>
+        <a href="/" class="back-link">&larr; Back to Main Control</a>
+        <section class="content-section">
+            <div class="system-controls">
+                <button class="section-save-btn" onclick="loadSensorData()">🔄 Refresh</button>
+            </div>
+            
+            <div class="sensor-grid" id="stats" style="margin-top: 20px;">
+                <!-- Stats will be populated by JavaScript -->
+            </div>
+            
+            <div id="sensor-container" style="margin-top: 30px;">
+                <div class="config-grid" id="sensor-grid">
+                    <!-- Sensor cards will be populated by JavaScript -->
+                </div>
+            </div>
+        </section>
+        
+        <div id="error-container" class="error-message" style="display: none;">
+            <!-- Error messages will appear here -->
+        </div>
+    </div>
+    <script>
+        // Get controller IP from URL or use default
+        const controllerIP = window.location.hostname || '192.168.1.100';
+        const apiBase = `http://${controllerIP}`;
+        
+        // --- Mock data for local development ---
+        const MOCK_SENSORS = {
+            "sensors": [
+                { "sensorId": "living_room_01", "name": "Living Room", "temperature": "72.5", "humidity": "45.1", "ipAddress": "192.168.1.150", "secondsSinceUpdate": 25 },
+                { "sensorId": "bedroom_01", "name": "Master Bedroom", "temperature": "70.2", "humidity": "48.9", "ipAddress": "192.168.1.151", "secondsSinceUpdate": 45 },
+                { "sensorId": "office_01", "name": "Office", "temperature": "73.8", "humidity": "42.0", "ipAddress": "192.168.1.152", "secondsSinceUpdate": 310 }
+            ],
+            "count": 3,
+            "averageTemperature": "72.2",
+            "averageHumidity": "45.3"
+        };
+
+        // Check if we are running locally (e.g., from file:// or localhost)
+        const isLocal = !window.location.hostname || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+        if (isLocal) {
+            console.log("Running in local mode, using mock data.");
+        }
+        // ------------------------------------
+
+        async function loadSensorData() {
+            if (isLocal) {
+                // Simulate a small delay to mimic a network request for a realistic test
+                setTimeout(() => {
+                    console.log("Using mock data to render page.");
+                    updateStats(MOCK_SENSORS);
+                    updateSensorGrid(MOCK_SENSORS.sensors);
+                    hideError();
+                }, 200);
+                return; // Stop here for local mode
+            }
+
+            try {
+                const response = await fetch(`${apiBase}/indoor_sensors`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                updateStats(data);
+                updateSensorGrid(data.sensors);
+                hideError();
+                
+            } catch (error) {
+                console.error('Error loading sensor data:', error);
+                showError(`Failed to load sensor data: ${error.message}`);
+            }
+        }
+        
+        function updateStats(data) {
+            const statsContainer = document.getElementById('stats');
+            
+            statsContainer.innerHTML = `
+                <div class="sensor-item">
+                    <strong>Active Sensors</strong>
+                    <div class="sensor-value">${data.count}</div>
+                </div>
+                <div class="sensor-item">
+                    <strong>Avg Temperature</strong>
+                    <div class="sensor-value">${data.averageTemperature || '--'}&deg;F</div>
+                </div>
+                <div class="sensor-item">
+                    <strong>Avg Humidity</strong>
+                    <div class="sensor-value">${data.averageHumidity || '--'}%</div>
+                </div>
+            `;
+        }
+        
+        function updateSensorGrid(sensors) {
+            const gridContainer = document.getElementById('sensor-grid');
+            
+            if (!sensors || sensors.length === 0) {
+                gridContainer.innerHTML = `
+                    <div class="error-message">
+                        <h3>No sensors found</h3>
+                        <p>No indoor sensors are currently reporting data.</p>
+                        <p>Check your sensor devices and network connectivity.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            gridContainer.innerHTML = sensors.map(sensor => {
+                const isOffline = sensor.secondsSinceUpdate > 300; // 5 minutes
+                const lastUpdateText = formatLastUpdate(sensor.secondsSinceUpdate);
+                
+                return `
+                    <div class="config-item sensor-dashboard-card ${isOffline ? 'offline' : ''}">
+                        <button class="sensor-remove-btn" onclick="removeSensor('${sensor.sensorId}')" 
+                                title="Remove this sensor">&times;</button>
+                        <label>${sensor.name}</label>
+                        <div class="sensor-dashboard-data">
+                            <span>Temperature:</span>
+                            <span class="sensor-value">${sensor.temperature}&deg;F</span>
+                        </div>
+                        <div class="sensor-dashboard-data">
+                            <span>Humidity:</span>
+                            <span class="sensor-value">${sensor.humidity}%</span>
+                        </div>
+                        <div class="sensor-dashboard-data">
+                            <span>IP Address:</span>
+                            <span style="font-weight: normal;">${sensor.ipAddress}</span>
+                        </div>
+                        <div class="last-update">
+                            ${isOffline ? '⚠️ OFFLINE - ' : ''}Last update: ${lastUpdateText}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function formatLastUpdate(seconds) {
+            if (seconds < 60) {
+                return `${seconds} seconds ago`;
+            } else if (seconds < 3600) {
+                return `${Math.floor(seconds / 60)} minutes ago`;
+            } else {
+                return `${Math.floor(seconds / 3600)} hours ago`;
+            }
+        }
+        
+        async function removeSensor(sensorId) {
+            if (!confirm(`Remove sensor ${sensorId}?`)) {
+                return;
+            }
+            
+            if (isLocal) {
+                alert(`(Mock Mode) Sensor "${sensorId}" would be removed.`);
+                // For a better local test, remove the sensor from the mock data and re-render
+                MOCK_SENSORS.sensors = MOCK_SENSORS.sensors.filter(s => s.sensorId !== sensorId);
+                MOCK_SENSORS.count = MOCK_SENSORS.sensors.length;
+                // Recalculate averages or just clear them for simplicity in mock mode
+                MOCK_SENSORS.averageTemperature = null;
+                MOCK_SENSORS.averageHumidity = null;
+                loadSensorData();
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${apiBase}/indoor_sensors/${sensorId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    alert('Sensor removed successfully');
+                    loadSensorData(); // Refresh the display
+                } else {
+                    const errorText = await response.text();
+                    alert(`Failed to remove sensor: ${errorText}`);
+                }
+            } catch (error) {
+                alert(`Error removing sensor: ${error.message}`);
+            }
+        }
+        
+        function showError(message) {
+            const errorContainer = document.getElementById('error-container');
+            errorContainer.textContent = message;
+            errorContainer.style.display = 'block';
+            document.getElementById('sensor-container').style.display = 'none';
+            document.getElementById('stats').style.display = 'none';
+        }
+        
+        function hideError() {
+            document.getElementById('error-container').style.display = 'none';
+            document.getElementById('sensor-container').style.display = 'block';
+            document.getElementById('stats').style.display = 'flex';
+        }
+        
+        // Load data when page loads
+        document.addEventListener('DOMContentLoaded', loadSensorData);
+        
+        // Auto-refresh every 30 seconds
+        setInterval(loadSensorData, 30000);
+    </script>
+</body>
+</html>)EMB1";
+const size_t INDOOR_DASHBOARD_PAGE_LEN = sizeof(INDOOR_DASHBOARD_PAGE) - 1;
+
+#if WEBUI_EMIT_STREAM_HELPER
+// NOTE: Assumes you have a global 'ESP8266WebServer server(80);'
+// If your instance is named differently, set WEBUI_EMIT_STREAM_HELPER=0
+// and paste a custom handler in your route file. 
+#include <ESP8266WebServer.h>                                                   
+static void handleIndoorDashboardPage() {
+  extern ESP8266WebServer server;                                              
+  server.sendHeader("Connection", "close");                                   
+  server.send_P(200, "text/html",                                               
+                INDOOR_DASHBOARD_PAGE,
+                sizeof(INDOOR_DASHBOARD_PAGE) - 1);
+}
+#endif
+
+#define F(string_literal) (FPSTR(PSTR(string_literal)))

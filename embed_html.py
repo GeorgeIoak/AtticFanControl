@@ -41,16 +41,10 @@ static void {func_name}() {{
 }}
 #endif
 """
-
-TEMPLATE_PLAIN = """{preamble}
-const char EMBEDDED_WEBUI[] PROGMEM = R"EMB1(
-{html}
-)EMB1";"""
-
 TEMPLATE_PLAIN_NAMED = """{preamble}
 #undef F
-const char {var_name}[] PROGMEM = R"EMB1(
-{html})EMB1";
+const char {var_name}[] PROGMEM = R"{delimiter}(
+{html}){delimiter}";
 const size_t {var_name}_LEN = sizeof({var_name}) - 1;
 {stream_helper}
 #define F(string_literal) (FPSTR(PSTR(string_literal)))
@@ -157,10 +151,12 @@ def main():
             bytes=",\n".join(lines),
         )
     else:
+        delimiter = pick_delimiter(html)
         content = TEMPLATE_PLAIN_NAMED.format(
             preamble=preamble,
             stream_helper=stream_helper,
-            html=html,
+            html=html, # This was the bug, it was not using the delimiter
+            delimiter=delimiter,
             var_name=args.var_name
         )
 

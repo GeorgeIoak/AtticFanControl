@@ -298,6 +298,13 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
   border-bottom: 1px solid var(--border-light);
 }
 
+.modal-link-container {
+  text-align: center;
+  margin: -5px 0 15px 0;
+  font-size: 0.95em;
+}
+
+
 /* ---------- Footer ---------- */
 .app-footer { margin-top: 2rem; padding: 0.75rem 0; text-align: center; opacity: 0.8; }
 
@@ -534,6 +541,51 @@ a{color:#1976D2}
 .dashboard-controls { 
     text-align: center; 
     margin-bottom: 20px; 
+}
+
+/* --- Minimal Styles for Indoor Sensor Dashboard --- */
+/* These styles are scoped to avoid affecting the main page */
+
+.sensor-dashboard-card {
+  position: relative; /* Needed for the remove button positioning */
+  text-align: left;   /* Override the default center alignment of config-item */
+  min-width: 250px;   /* Give cards a bit more space */
+}
+
+.sensor-dashboard-card.offline {
+  opacity: 0.6;
+  background: linear-gradient(135deg, #fff2f2 0%, #ffe4e4 100%);
+}
+
+.sensor-dashboard-data {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 0.95em;
+}
+
+.sensor-dashboard-card .last-update {
+  font-size: 0.85em;
+  color: #666;
+  margin-top: 10px;
+}
+
+.sensor-remove-btn {
+  background: #e74c3c;
+  color: white;
+  border: none;
+  padding: 2px 8px;
+  font-size: 1.2em;
+  line-height: 1;
+  border-radius: 4px;
+  cursor: pointer;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.sensor-remove-btn:hover {
+  background: #c0392b;
 }
 )EMB1";
 const size_t ATTICFAN_CSS_LEN = sizeof(ATTICFAN_CSS) - 1;
