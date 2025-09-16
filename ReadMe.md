@@ -5,21 +5,25 @@
 - [🌀 Attic Fan Controller (ESP8266 + Web UI + OTA)](#-attic-fan-controller-esp8266--web-ui--ota)
   - [🗂️ Table of Contents](#️-table-of-contents)
   - [✨ Features](#-features)
+  - [🛠️ Setup and Installation](#️-setup-and-installation)
+    - [1. Minimum Requirements](#1-minimum-requirements)
+    - [2. Required Libraries](#2-required-libraries)
+    - [3. Arduino IDE Configuration](#3-arduino-ide-configuration)
+    - [4. Credentials Setup](#4-credentials-setup)
     - [`embed_html.py`](#embed_htmlpy)
   - [Required Libraries](#required-libraries)
-  - [Software Setup](#software-setup)
-  - [Wi-Fi Credentials](#wi-fi-credentials)
+    - [3. Arduino IDE Configuration](#3-arduino-ide-configuration-1)
+    - [4. Credentials Setup](#4-credentials-setup-1)
   - [📁 Project Structure](#-project-structure)
     - [Step 2: Change the Firmware Flag](#step-2-change-the-firmware-flag)
-    - [Step 3: Upload Files to the Device](#step-3-upload-files-to-the-device)
-      - [Method A: OTA Upload (Recommended for Developers)](#method-a-ota-upload-recommended-for-developers)
-      - [Method B: OTA Upload (Web UI Only)](#method-b-ota-upload-web-ui-only)
-      - [Method C: Wired Upload (Initial Flash or Recovery)](#method-c-wired-upload-initial-flash-or-recovery)
-  - [API Reference](#api-reference)
+      - [Step 3: Upload Files to the Device](#step-3-upload-files-to-the-device)
+        - [Method A: OTA Upload (Recommended for Developers)](#method-a-ota-upload-recommended-for-developers)
+        - [Method B: OTA Upload (Web UI Only)](#method-b-ota-upload-web-ui-only)
+        - [Method C: Wired Upload (Initial Flash or Recovery)](#method-c-wired-upload-initial-flash-or-recovery)
+  - [📖 API Reference](#-api-reference)
     - [Indoor Sensor API](#indoor-sensor-api)
-    - [Test \& Development API](#test--development-api)
+      - [Test \& Development API](#test--development-api)
   - [🏠 Indoor Sensor Integration](#-indoor-sensor-integration)
-    - [Indoor Sensor Features](#indoor-sensor-features)
     - [Indoor Sensor Setup](#indoor-sensor-setup)
     - [Example Indoor Sensor Configuration](#example-indoor-sensor-configuration)
     - [Integration with Fan Logic](#integration-with-fan-logic)
@@ -60,8 +64,62 @@ This project lets you control an attic fan using a web interface hosted on an ES
 - **Indoor Sensor Integration:**
   - Auto-discovers and displays data from up to 10 remote ESP8266-based indoor sensors.
   - Publishes indoor sensor data to MQTT for Home Assistant integration.
+- **MQTT & Home Assistant:** Full integration with MQTT for control and monitoring, including Home Assistant auto-discovery for all entities.
 - **Advanced Connectivity:**
 
+## 🛠️ Setup and Installation
+
+### 1. Minimum Requirements
+
+- **Hardware**: An ESP8266 board like a NodeMCU or Wemos D1 Mini.
+- **Software**:
+  - Arduino IDE
+  - Python 3
+  - mklittlefs (must be in your system's PATH)
+  - esptool.py (`pip install esptool`)
+
+### 2. Required Libraries
+
+Install these libraries via Arduino IDE > Tools > Manage Libraries:
+
+| Library Name        | Author / Source      | Purpose                                 |
+|---------------------|---------------------|------------------------------------------|
+| ElegantOTA          | Ayush Sharma        | Web-based firmware updates               |
+| DFRobot_SHT20       | DFRobot             | Read temperature & humidity from SHT20/SHT21 |
+| OneWire             | Paul Stoffregen     | Communicate with DS18B20                 |
+| ArduinoJson         | Benoit Blanchon     | Efficient JSON handling                  |
+| PubSubClient      | Nick O'Leary        | MQTT client for integration              |
+| DallasTemperature   | Miles Burton        | High-level DS18B20 interface             |
+
+### 3. Arduino IDE Configuration
+
+1. **Install ESP8266 Core**:
+    - Add this URL to **Arduino > Preferences > Additional Board Manager URLs**:
+      `http://arduino.esp8266.com/stable/package_esp8266com_index.json`
+    - Go to **Tools > Board > Boards Manager...**, search for "esp8266", and install version **3.1.2 or newer**.
+2. **Board Settings**:
+    - In **Tools > Flash Size**, select your board's memory size. For most NodeMCU/Wemos boards, this is **4MB**.
+    - For the partition scheme, choose **`4MB (FS:2MB, OTA:~1019KB)`**. This is often the default and provides 2MB for the data log filesystem, which is ideal for long-term history.
+      - *Note: The `manage_ui.py buildfs` script is pre-configured for this 2MB partition size. If you must use a different partition scheme (e.g., 1MB), you will need to edit the script.*
+
+### 4. Credentials Setup
+
+Create a `secrets.h` file in the main `AtticFanControl/` sketch directory. This file is ignored by Git and holds your sensitive information.
+
+```cpp
+// AtticFanControl/secrets.h
+#pragma once
+
+// --- WiFi Credentials ---
+#define WIFI_SSID "YourWiFi_SSID"
+#define WIFI_PASSWORD "YourWiFi_Password"
+
+// --- MQTT Broker Details (optional) ---
+#define MQTT_BROKER "192.168.1.100"
+#define MQTT_PORT 1883
+#define MQTT_USER "your_mqtt_user"
+#define MQTT_PASSWORD "your_mqtt_password"
+```
 
 ```text
 AtticFanControl/                  # Main project folder
@@ -88,9 +146,9 @@ AtticFanControl/                  # Main project folder
 └── .gitignore                # Prevents secrets from being committed
 ---
 
-## Project Scripts & Utilities
+## ⚙️ Development & Deployment
 
-This project includes several Python scripts to simplify development and deployment.
+### Project Scripts & Utilities
 
 ### `manage_ui.py`
 
@@ -99,7 +157,7 @@ This is the primary helper script for managing the web UI assets.
 - **`python3 manage_ui.py update`**: Regenerates all C++ header files (e.g., `webui_embedded.h`) from the source files in the `data/` directory. Use this when developing for the **embedded UI** (`USE_FS_WEBUI = 0`).
 - **`python3 manage_ui.py watch`**: Watches the `data/` directory and automatically runs the `update` command whenever a file is changed. Ideal for live-editing the embedded UI.
 - **`python3 manage_ui.py buildfs`**: Packages the contents of the `data/` directory into a `filesystem.bin` image. This is required for deploying the **filesystem UI** (`USE_FS_WEBUI = 1`). See the Deploying the Filesystem UI section for more details.
-
+ 
 ### `test_indoor_sensors.py`
 
 Simulates indoor sensor devices by sending test data to the controller's REST API. This is useful for testing the indoor sensor integration without needing physical hardware.
@@ -127,22 +185,35 @@ Install these libraries via Arduino IDE > Tools > Manage Libraries:
 | [PubSubClient](https://github.com/knolleary/pubsubclient)      | Nick O'Leary        | MQTT client for integration              |
 | [DallasTemperature](https://github.com/milesburton/Arduino-Temperature-Control-Library)   | Miles Burton        | High-level DS18B20 interface             |
 
-## Software Setup
+### 3. Arduino IDE Configuration
 
-- Arduino IDE with ESP8266 board support
-- Add this URL to **Arduino > Preferences > Additional Board Manager URLs**:
-
-<http://arduino.esp8266.com/stable/package_esp8266com_index.json>
-
-- Use ESP8266 core v3.1.2 or newer for full OTA compatibility
-
+1. **Install ESP8266 Core**:
+    - Add this URL to **Arduino > Preferences > Additional Board Manager URLs**:
+      `http://arduino.esp8266.com/stable/package_esp8266com_index.json`
+    - Go to **Tools > Board > Boards Manager...**, search for "esp8266", and install version **3.1.2 or newer**.
+2. **Board Settings**:
 - In **Tools > Flash Size**, select your board's memory size. For most NodeMCU/Wemos boards, this is **4MB**.
 - For the partition scheme, choose **`4MB (FS:2MB, OTA:~1019KB)`**. This is often the default and provides 2MB for the data log filesystem, which is ideal for long-term history.
   - *Note: The `manage_ui.py buildfs` script is pre-configured for this 2MB partition size. If you must use a different partition scheme (e.g., 1MB), you will need to edit the script.*
 
-## Wi-Fi Credentials
+### 4. Credentials Setup
 
-Create a `secrets.h` file in the sketch directory with the following content. This file stores your sensitive information and is ignored by version control.
+Create a `secrets.h` file in the main `AtticFanControl/` sketch directory. This file is ignored by Git and holds your sensitive information.
+
+```cpp
+// AtticFanControl/secrets.h
+#pragma once
+
+// --- WiFi Credentials ---
+#define WIFI_SSID "YourWiFi_SSID"
+#define WIFI_PASSWORD "YourWiFi_Password"
+
+// --- MQTT Broker Details (optional) ---
+#define MQTT_BROKER "192.168.1.100"
+#define MQTT_PORT 1883
+#define MQTT_USER "your_mqtt_user"
+#define MQTT_PASSWORD "your_mqtt_password"
+```
 
 ## 📁 Project Structure
 
@@ -180,11 +251,11 @@ In `AtticFanControl.ino`, change the flag to `1` to tell the firmware to use the
 #define USE_FS_WEBUI 1
 ```
 
-### Step 3: Upload Files to the Device
+#### Step 3: Upload Files to the Device
 
 Choose one of the following methods to upload the filesystem and the new firmware.
 
-#### Method A: OTA Upload (Recommended for Developers)
+##### Method A: OTA Upload (Recommended for Developers)
 
 This is the fastest method if you are actively developing.
 
@@ -199,7 +270,7 @@ This is the fastest method if you are actively developing.
 > 1. **First, try restarting the IDE.** Completely quit and reopen the Arduino IDE. This is the most common fix, as it clears the IDE's temporary cache and will prompt for the password again on the next upload attempt.
 > 2. **If restarting fails, change the hostname as a last resort.** This is a more forceful way to clear the cache. Change the `MDNS_HOSTNAME` in `hardware.h` (e.g., from `"AtticFan"` to `"AtticFanController"`), upload this change via USB one last time, and restart the IDE. This forces the IDE to discover the device as "new" and re-authenticate.
 
-#### Method B: OTA Upload (Web UI Only)
+##### Method B: OTA Upload (Web UI Only)
 
 This method is useful for updating a device without needing the Arduino IDE.
 
@@ -207,7 +278,7 @@ This method is useful for updating a device without needing the Arduino IDE.
 2. **Upload Filesystem:** Navigate to the device's web UI and go to the `/update` page. Click the **"Filesystem"** button, choose the `filesystem.bin` file, and upload it. The device will reboot.
 3. **Upload Firmware:** After it reconnects, return to the `/update` page. Click the **"Firmware"** button, choose the new firmware `.bin` file you exported, and upload it.
 
-#### Method C: Wired Upload (Initial Flash or Recovery)
+##### Method C: Wired Upload (Initial Flash or Recovery)
 
 Use this method for the very first time you program a blank device.
 
@@ -220,9 +291,7 @@ Use this method for the very first time you program a blank device.
 
 3. **Upload Firmware:** Use the Arduino IDE to upload the sketch normally via the USB serial port.
 
----
-
-## API Reference
+## 📖 API Reference
 
 The controller exposes several API endpoints for programmatic control, integration, and diagnostics.
 
@@ -273,9 +342,9 @@ The controller exposes several API endpoints for programmatic control, integrati
 
 - **`DELETE /indoor_sensors/{sensorId}`**: Removes a specific sensor from the controller's list.
 
-### Test & Development API
+#### Test & Development API
 
-- **`GET /test/set_temps?attic=...&outdoor=...`**: Sets simulated sensor values. Requires Test Mode to be enabled.
+- **`GET /test/set_temps?attic=...&outdoor=...`**: Sets simulated sensor values. Requires "Test Mode" to be enabled in the UI.
 
 - **`GET /test/force_ap`**: Forces the device into Access Point (AP) mode for WiFi recovery.
 
@@ -285,8 +354,9 @@ The controller exposes several API endpoints for programmatic control, integrati
 
 The Attic Fan Controller supports multiple ESP8266-based indoor sensors that report temperature and humidity to the main controller via HTTP POST requests. Indoor sensors are auto-discovered and displayed in the web UI, and can be integrated with Home Assistant via MQTT auto-discovery.
 
-### Indoor Sensor Features
+**Features:**
 
+- **Indoor Sensor Features**
 - **Multiple Sensor Support**: Register up to 10 indoor sensors, each with a unique ID and name.
 - **Automatic Registration & Discovery**: Sensors register themselves automatically when they send data; no manual setup required on the controller.
 - **Web UI Integration**: Indoor sensor data (average and per-room) is displayed in the main controller's dashboard, with a modal for details.
