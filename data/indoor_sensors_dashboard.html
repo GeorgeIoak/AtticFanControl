@@ -11,18 +11,18 @@
 <body>
     <div class="page-container">
         <h1>🏠 Indoor Sensors Dashboard</h1>
-        <a href="/" class="back-link">&larr; Back to Main Control Page</a>
+        <a href="/" class="back-link">&larr; Back to Main Control</a>
         <section class="content-section">
-            <div class="dashboard-controls">
+            <div class="system-controls">
                 <button class="section-save-btn" onclick="loadSensorData()">🔄 Refresh</button>
             </div>
             
-            <div class="stats" id="stats">
+            <div class="sensor-grid" id="stats" style="margin-top: 20px;">
                 <!-- Stats will be populated by JavaScript -->
             </div>
             
-            <div id="sensor-container">
-                <div class="sensor-grid" id="sensor-grid">
+            <div id="sensor-container" style="margin-top: 30px;">
+                <div class="config-grid" id="sensor-grid">
                     <!-- Sensor cards will be populated by JavaScript -->
                 </div>
             </div>
@@ -91,17 +91,17 @@
             const statsContainer = document.getElementById('stats');
             
             statsContainer.innerHTML = `
-                <div class="stat-card">
-                    <div class="stat-number">${data.count}</div>
-                    <div class="stat-label">Active Sensors</div>
+                <div class="sensor-item">
+                    <strong>Active Sensors</strong>
+                    <div class="sensor-value">${data.count}</div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-number">${data.averageTemperature || '--'}</div>
-                    <div class="stat-label">Avg Temperature (°F)</div>
+                <div class="sensor-item">
+                    <strong>Avg Temperature</strong>
+                    <div class="sensor-value">${data.averageTemperature || '--'}&deg;F</div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-number">${data.averageHumidity || '--'}</div>
-                    <div class="stat-label">Avg Humidity (%)</div>
+                <div class="sensor-item">
+                    <strong>Avg Humidity</strong>
+                    <div class="sensor-value">${data.averageHumidity || '--'}%</div>
                 </div>
             `;
         }
@@ -125,21 +125,21 @@
                 const lastUpdateText = formatLastUpdate(sensor.secondsSinceUpdate);
                 
                 return `
-                    <div class="sensor-card ${isOffline ? 'offline' : ''}">
-                        <button class="remove-btn" onclick="removeSensor('${sensor.sensorId}')" 
+                    <div class="config-item sensor-dashboard-card ${isOffline ? 'offline' : ''}">
+                        <button class="sensor-remove-btn" onclick="removeSensor('${sensor.sensorId}')" 
                                 title="Remove this sensor">&times;</button>
-                        <div class="sensor-name">${sensor.name}</div>
-                        <div class="sensor-data">
+                        <label>${sensor.name}</label>
+                        <div class="sensor-dashboard-data">
                             <span>Temperature:</span>
-                            <span class="sensor-value temp">${sensor.temperature}&deg;F</span>
+                            <span class="sensor-value">${sensor.temperature}&deg;F</span>
                         </div>
-                        <div class="sensor-data">
+                        <div class="sensor-dashboard-data">
                             <span>Humidity:</span>
-                            <span class="sensor-value humidity">${sensor.humidity}%</span>
+                            <span class="sensor-value">${sensor.humidity}%</span>
                         </div>
-                        <div class="sensor-data">
+                        <div class="sensor-dashboard-data">
                             <span>IP Address:</span>
-                            <span>${sensor.ipAddress}</span>
+                            <span style="font-weight: normal;">${sensor.ipAddress}</span>
                         </div>
                         <div class="last-update">
                             ${isOffline ? '⚠️ OFFLINE - ' : ''}Last update: ${lastUpdateText}

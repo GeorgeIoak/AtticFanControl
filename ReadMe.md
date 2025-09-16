@@ -377,6 +377,7 @@ The controller exposes several API endpoints for programmatic control, integrati
 
 
 </details>
+
 - **`GET /indoor_sensors`**: Retrieves a list of all active indoor sensors, their data, and overall averages.
 
 - **`DELETE /indoor_sensors/{sensorId}`**: Removes a specific sensor from the controller's list.

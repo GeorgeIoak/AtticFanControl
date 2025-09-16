@@ -208,6 +208,9 @@ const char EMBEDDED_WEBUI[] PROGMEM = R"EMB1(
   <div class="modal-content">
     <span class="close-btn" onclick="closeIndoorSensorsModal()">&times;</span>
     <h3>All Indoor Sensors</h3>
+    <div class="modal-link-container">
+          <a href="/indoor_sensors_dashboard.html">Go to Indoor Sensors Dashboard &rarr;</a>
+        </div>
     <div id="indoorSensorsList"></div>
   </div>
 </div>

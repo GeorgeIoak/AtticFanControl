@@ -47,6 +47,11 @@ UI_FILES_TO_MANAGE = {
         "dest": "favicon_png.h",
         "var": "FAVICON_PNG",
         "func": "handleFaviconPng"
+    },
+    "data/indoor_sensors_dashboard.html": {
+        "dest": "indoor_sensors_dashboard.h",
+        "var": "INDOOR_DASHBOARD_PAGE",
+        "func": "handleIndoorDashboardPage"
     }
 }
 POLL_INTERVAL_S = 1.0  # How often to check for file changes in watch mode.
