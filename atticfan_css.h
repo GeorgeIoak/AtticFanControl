@@ -273,8 +273,16 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 #timerStatus{font-size:.95rem;color:var(--warning-orange);font-weight:600;margin-top:8px;display:none;padding:8px;background:rgba(253,126,20,.1);border-radius:6px;border:1px solid rgba(253,126,20,.2)}
 
 /* ---------- System Controls ---------- */
-.system-controls{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:15px}
-
+.system-controls-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+}
+.system-row {
+  display: flex;
+  gap: 1rem;
+}
 /* ---------- Test Panel (unified; replaces duplicated blocks) ---------- */
 #test-panel .config-item label{display:block;margin-bottom:12px}
 #test-panel .config-item label { padding-bottom: 15px; }

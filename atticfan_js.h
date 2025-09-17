@@ -726,6 +726,23 @@ function clearDiagnostics() {
       });
   }
 }
+function clearHistory() {
+  if (testMode) {
+    alert("Clear history command sent (test mode)."); return;
+  }
+  if (confirm("Are you sure you want to permanently delete the history log? This action cannot be undone.")) {
+    fetch("/clear_history")
+      .then(res => res.text())
+      .then(text => {
+        showToast(text);
+        fetchAndRenderHistory(); // Refresh the chart, which should now be empty
+      })
+      .catch(err => {
+  debugError("Failed to clear history:", err);
+        showToast("Error clearing history log.");
+      });
+  }
+}
 function showToast(message) {
   const toast = document.getElementById("saveToast");
   toast.textContent = message;
