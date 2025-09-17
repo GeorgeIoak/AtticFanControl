@@ -2,10 +2,10 @@
 
 #define ONBOARD_LED_PIN   D4     // Built-in LED on NodeMCU (GPIO2, active LOW)
 // === GPIO Assignments ===
-#define FAN_RELAY_PIN     D1     // Relay control for attic fan
+#define DS18B20_PIN       D1     // OneWire data pin for DS18B20 (Moved from D4 to avoid conflict)
 #define SHT21_SDA_PIN     D2     // I2C SDA for SHT21
 #define SHT21_SCL_PIN     D3     // I2C SCL for SHT21
-#define DS18B20_PIN       D5     // OneWire data pin for DS18B20 (Moved from D4 to avoid conflict)
+#define FAN_RELAY_PIN     D5     // Relay control for attic fan
 #define SHT21_I2C_ADDR    0x40   // I2C address for SHT21
 
 // === Sensor Presence Flags ===
