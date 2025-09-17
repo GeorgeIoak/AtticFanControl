@@ -1,6 +1,7 @@
 #pragma once
 
 #include "types.h"
+#include "diagnostics.h"
 #include <EEPROM.h>
 #include "hardware.h"
 
@@ -75,6 +76,37 @@ inline void clearConfig() {
 }
 
 /**
+ * @brief A helper function to check a float config value, log, and correct if invalid.
+ */
+inline bool checkAndCorrectFloat(float* value, const char* name, float min, float max, float defaultValue) {
+  if (isnan(*value) || *value < min || *value > max) {
+    char buffer[128];
+    // Use a temporary float to print the bad value, as it might be garbage.
+    float badValue = *value;
+    *value = defaultValue; // Correct the value first
+    snprintf(buffer, sizeof(buffer), "[WARN] Invalid '%s' (val: %f) in config. Reset to default (%.1f).", name, badValue, *value);
+    logDiagnostics(buffer);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * @brief An overloaded helper for unsigned long values.
+ */
+inline bool checkAndCorrectULong(unsigned long* value, const char* name, unsigned long min, unsigned long max, unsigned long defaultValue) {
+  if (*value < min || *value > max) {
+    char buffer[128];
+    unsigned long badValue = *value;
+    *value = defaultValue; // Correct the value first
+    snprintf(buffer, sizeof(buffer), "[WARN] Invalid '%s' (val: %lu) in config. Reset to default (%lu).", name, badValue, *value);
+    logDiagnostics(buffer);
+    return true;
+  }
+  return false;
+}
+
+/**
  * @brief Loads configuration from EEPROM. If EEPROM is invalid or empty,
  * it loads default values and saves them.
  */
@@ -132,6 +164,30 @@ inline void loadConfig() {
     // Save the default configuration for next time
     saveConfig();
   } else {
+    bool configWasCorrected = false;
+    // --- Sanity checks for all numeric config values ---
+    // This prevents uninitialized memory from being used if a new field
+    // is added and the device has an older config in EEPROM.
+
+    // Temperature thresholds (reasonable range: 50-150 F)
+    configWasCorrected |= checkAndCorrectFloat(&config.fanOnTemp, "fanOnTemp", 50.0f, 150.0f, FAN_ON_TEMP_DEFAULT);
+    configWasCorrected |= checkAndCorrectFloat(&config.preCoolTriggerTemp, "preCoolTriggerTemp", 50.0f, 150.0f, PRECOOL_TRIGGER_TEMP_DEFAULT);
+
+    // Temperature differentials (reasonable range: 0-50 F)
+    configWasCorrected |= checkAndCorrectFloat(&config.fanDeltaTemp, "fanDeltaTemp", 0.0f, 50.0f, FAN_DELTA_TEMP_DEFAULT);
+    configWasCorrected |= checkAndCorrectFloat(&config.fanHysteresis, "fanHysteresis", 0.0f, 50.0f, FAN_HYSTERESIS_DEFAULT);
+    configWasCorrected |= checkAndCorrectFloat(&config.preCoolTempOffset, "preCoolTempOffset", 0.0f, 50.0f, PRECOOL_TEMP_OFFSET_DEFAULT);
+
+    // History log interval (1 minute to 24 hours in ms)
+    configWasCorrected |= checkAndCorrectULong(&config.historyLogIntervalMs, "historyLogIntervalMs", 60000UL, 86400000UL, HISTORY_LOG_INTERVAL_DEFAULT);
+
+    if (configWasCorrected) {
+      #if DEBUG_SERIAL
+      logSerial("[WARN] One or more config values were invalid. Corrected and re-saving EEPROM.");
+      #endif
+      saveConfig(); // Save the corrected configuration back to EEPROM
+    }
+
     #if DEBUG_SERIAL
     logSerial("[INFO] Configuration loaded from EEPROM.");
     const char* modeStr;
@@ -157,15 +213,5 @@ inline void loadConfig() {
     logSerial("  - Indoor Sensors Enabled: %s", config.indoorSensorsEnabled ? "true" : "false");
     logSerial("  - History Log Interval: %lu ms", config.historyLogIntervalMs);
     #endif
-
-    // Sanity check for the history log interval. If the value from EEPROM is corrupt or
-    // outside a reasonable range (1 min to 24 hours), reset it to the default.
-    if (config.historyLogIntervalMs < 60000UL || config.historyLogIntervalMs > 86400000UL) {
-      #if DEBUG_SERIAL
-      logSerial("[WARN] Invalid history log interval (%lu ms) from EEPROM. Resetting to default (%lu ms).", config.historyLogIntervalMs, HISTORY_LOG_INTERVAL_DEFAULT);
-      #endif
-      config.historyLogIntervalMs = HISTORY_LOG_INTERVAL_DEFAULT;
-      saveConfig(); // Save the corrected configuration.
-    }
   }
 }

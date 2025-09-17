@@ -243,6 +243,7 @@ inline void handleResetConfig(ESP8266WebServer &server) {
 
 inline void handleGetConfig(ESP8266WebServer &server) {
   StaticJsonDocument<512> doc;
+  // Values are now sanitized at boot in loadConfig(), so we can just send them.
   doc["fanOnTemp"] = config.fanOnTemp;
   doc["fanDeltaTemp"] = config.fanDeltaTemp;
   doc["fanHysteresis"] = config.fanHysteresis;
