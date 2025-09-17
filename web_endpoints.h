@@ -92,7 +92,7 @@ inline void handleFan(ESP8266WebServer &server, FanMode &fanMode) {
       const char* postActionStr = doc["postAction"];
       
       logDiagnostics("[ACTION] Manual timer started via web UI.");
-      PostTimerAction postAction = (strcmp(postActionStr, "revert_to_auto") == 0) ? REVERT_TO_AUTO : STAY_MANUAL;
+      PostTimerAction postAction = (strcmp(postActionStr, "go_auto") == 0) ? REVERT_TO_AUTO : STAY_MANUAL;
       
       startManualTimer(delay, duration, postAction);
       fanMode = MANUAL_TIMED;
