@@ -199,7 +199,7 @@ const char EMBEDDED_WEBUI[] PROGMEM = R"EMB1(
         <option value="stay_manual">Stay MANUAL (Fan Off)</option>
       </select>
     </div>
-    <div class="timer-actions"><button class="section-save-btn" onclick="startTimedRun()">Start Timed Run</button></div>
+    <div class="timer-actions" style="text-align: center;"><button class="section-save-btn" onclick="startTimedRun()">Start Timed Run</button></div>
   </div>
 </div>
 
