@@ -212,6 +212,7 @@ void setup() {
   server.on("/restart", [](){ handleRestart(server); });
   server.on("/reset_config", [](){ handleResetConfig(server); });
   server.on("/clear_diagnostics", [](){ handleClearDiagnostics(server); });
+  server.on("/clear_history", [](){ handleClearHistory(server); });
   server.on("/diagnostics", [](){ handleDiagnosticsDownload(server); });
   server.on("/update_wrapper", HTTP_GET, [](){ handleUpdateWrapper(server); });
   ElegantOTA.begin(&server, ota_user, ota_password);

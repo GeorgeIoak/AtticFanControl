@@ -58,6 +58,24 @@ inline void handleClearDiagnostics(ESP8266WebServer &server) {
   }
 }
 
+/**
+ * @brief Handles requests to clear the history log file.
+ */
+inline void handleClearHistory(ESP8266WebServer &server) {
+  if (LittleFS.exists(HISTORY_LOG_PATH)) {
+    if (LittleFS.remove(HISTORY_LOG_PATH)) {
+      logDiagnostics("[INFO] History log cleared by user.");
+      server.send(200, "text/plain", "History log cleared successfully.");
+    } else {
+      server.send(500, "text/plain", "Failed to clear history log.");
+    }
+  } else {
+    server.send(200, "text/plain", "History log was already empty.");
+  }
+  // After clearing, we should re-create the header on the next log to avoid issues.
+  // The appendHistoryLog function already handles this if the file is size 0.
+}
+
 inline void handleHelp(ESP8266WebServer &server) {
 #if USE_FS_WEBUI
   File f = LittleFS.open("/help.html", "r");
