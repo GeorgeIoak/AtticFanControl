@@ -287,11 +287,13 @@ function updateSensorData() {
         if (data.timerMode === 'delay') {
           timerStatusEl.innerHTML = `Timer starts in: ${remainingTime}`;
         } else {
-          timerStatusEl.innerHTML = `Timer runs for: ${remainingTime}`;
+          timerStatusEl.innerHTML = `Timer active for: ${remainingTime}`;
         }
-        timerStatusEl.style.display = 'block';
+        timerStatusEl.style.display = 'block'; // Make it visible
+        timerStatusEl.style.textAlign = 'center'; // Center the text
+        timerStatusEl.style.marginTop = '8px'; // Add some space above it
       } else {
-        timerStatusEl.style.display = 'none';
+        timerStatusEl.style.display = 'none'; // Hide it
       }
       if (data.testModeEnabled) {
         document.getElementById('test-panel').style.display = 'block';
