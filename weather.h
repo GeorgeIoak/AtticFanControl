@@ -114,7 +114,7 @@ inline void updateWeatherData() {
   HTTPClient http;
   String url = "http://api.open-meteo.com/v1/forecast?latitude=" + String(WEATHER_LATITUDE) +
                "&longitude=" + String(WEATHER_LONGITUDE) +
-               "&current=temperature_2m,relativehumidity_2m,weathercode&daily=weathercode,temperature_2m_max,temperature_2m_min,sunrise,sunset&hourly=temperature_2m,weathercode&temperature_unit=fahrenheit&windspeed_unit=mph&precipitation_unit=inch&forecast_days=3&forecast_hours=5&timezone=auto";
+               "&current=temperature_2m,relativehumidity_2m,weathercode&daily=weathercode,temperature_2m_max,temperature_2m_min,sunrise,sunset&hourly=temperature_2m,weathercode&temperature_unit=fahrenheit&windspeed_unit=mph&precipitation_unit=inch&forecast_days=3&timezone=auto";
 
   http.begin(client, url);
   #if DEBUG_SERIAL

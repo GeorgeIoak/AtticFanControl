@@ -431,7 +431,7 @@ function updateWeatherData() {
   if (isLocalDev) {
     const lat = 38.72;
     const lon = -121.36;
-    const url = `http://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relativehumidity_2m,weathercode&daily=weathercode,temperature_2m_max,temperature_2m_min,sunrise,sunset&hourly=temperature_2m,weathercode&temperature_unit=fahrenheit&windspeed_unit=mph&precipitation_unit=inch&forecast_days=3&forecast_hours=5&timezone=auto`;
+    const url = `http://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relativehumidity_2m,weathercode&daily=weathercode,temperature_2m_max,temperature_2m_min,sunrise,sunset&hourly=temperature_2m,weathercode&temperature_unit=fahrenheit&windspeed_unit=mph&precipitation_unit=inch&forecast_days=3&timezone=auto`;
   debugLog('[AtticFan] Fetching weather from Open-Meteo:', url);
     (async () => {
       try {
@@ -470,10 +470,30 @@ function updateWeatherData() {
         iconEl.textContent = "☀️";
         tempEl.textContent = "75";
         humidityEl.textContent = "55";
+        
+        // Mock sunrise/sunset
+        updateSunriseSunset("06:30", "19:45");
+        
         const mockForecast = [
           { dayOfWeek: new Date().getUTCDay(), icon: '☀️', max: '85', min: '65' },
           { dayOfWeek: (new Date().getUTCDay() + 1) % 7, icon: '⛅', max: '82', min: '63' },
           { dayOfWeek: (new Date().getUTCDay() + 2) % 7, icon: '🌦️', max: '78', min: '60' }
+        ];
+        renderForecast(forecastContainer, mockForecast, true);
+        
+        // Mock hourly forecast
+        const now = new Date();
+        const mockHourlyData = [];
+        for (let i = 0; i < 5; i++) {
+          const hour = new Date(now.getTime() + i * 60 * 60 * 1000);
+          const timeStr = hour.toISOString().substring(0, 16);
+          mockHourlyData.push({
+            time: timeStr,
+            temperature: 75 + Math.random() * 10,
+            weatherCode: [0, 1, 1, 80, 61][i]
+          });
+        }
+        renderHourlyForecast(mockHourlyData);
         ];
         renderForecast(forecastContainer, mockForecast, true);
       }
@@ -494,6 +514,12 @@ function updateWeatherData() {
       // Update sunrise/sunset if available
       if (data.sunrise && data.sunset) {
         updateSunriseSunset(data.sunrise, data.sunset);
+      } else {
+        // Clear any existing sunrise/sunset display if data isn't available
+        const sunriseEl = document.getElementById('sunriseTime');
+        const sunsetEl = document.getElementById('sunsetTime');
+        if (sunriseEl) sunriseEl.textContent = '🌅 --:--';
+        if (sunsetEl) sunsetEl.textContent = '🌇 --:--';
       }
       
       renderForecast(forecastContainer, data.forecast);
