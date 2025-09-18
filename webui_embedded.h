@@ -168,24 +168,20 @@ const char EMBEDDED_WEBUI[] PROGMEM = R"EMB1(
   </section>
 <section class="content-section">
   <h2>System & Maintenance <a href="help.html#api-reference" class="help-link" title="Click for help on system and API" aria-label="Help on system and API">(?)</a></h2>
-      <div class="system-controls-grid">
-        <div class="system-row">
-  <button onclick="window.location.href='/update_wrapper'" class="section-save-btn">Firmware Update</button>
-  <button onclick="openSystemInfoModal()" class="section-save-btn">System Info</button>
-        </div>
-        <div class="system-row">
+    <div class="system-controls-columns">
+      <div class="system-col">
+        <button onclick="window.location.href='/update_wrapper'" class="section-save-btn">Firmware Update</button>
         <a href="/diagnostics" class="section-save-btn" download>Download Diagnostics</a>
-        <button onclick="clearDiagnostics()" class="section-save-btn">Clear Diagnostics</button>
-        </div>
-        <div class="system-row">
         <a href="/history.csv" class="section-save-btn" download>Download History (CSV)</a>
-        <button onclick="clearHistory()" class="section-save-btn">Clear History</button>
-        </div>
-        <div class="system-row danger-row">
-          <button onclick="restartDevice()" class="section-save-btn btn-danger">Restart Device</button>
-          <button onclick="resetConfig()" class="section-save-btn btn-danger">Reset to Defaults</button>
-        </div>
+        <button onclick="restartDevice()" class="section-save-btn btn-danger">Restart Device</button>
       </div>
+      <div class="system-col">
+        <button onclick="openSystemInfoModal()" class="section-save-btn">System Info</button>
+        <button onclick="clearDiagnostics()" class="section-save-btn">Clear Diagnostics</button>
+        <button onclick="clearHistory()" class="section-save-btn">Clear History</button>
+        <button onclick="resetConfig()" class="section-save-btn btn-danger">Reset to Defaults</button>
+      </div>
+    </div>
     </section>
 
 <footer class="app-footer">Firmware: <span id="firmwareVersion">--</span></footer>

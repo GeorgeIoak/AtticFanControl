@@ -1,3 +1,14 @@
+/* Uniform button sizing and vertical centering for System & Maintenance */
+.system-controls-columns .section-save-btn {
+  min-width: 180px;
+  max-width: 220px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: normal;
+  text-align: center;
+}
 @charset "UTF-8";
 
 /* Add vertical spacing between ON/OFF and SET TIMER buttons in Mode Control */
@@ -5,17 +16,6 @@
   margin-top: 0.75rem;
 }
 /* Danger row for System & Maintenance section */
-.danger-row {
-  display: flex;
-  flex-direction: row;
-  gap: 1rem;
-  margin-top: 1rem;
-  margin-bottom: 0.5rem;
-  justify-content: center;
-}
-.danger-row .btn-danger {
-  min-width: 160px;
-}
 /* Style for help-link (the (?), shown as superscript) */
 .help-link {
   font-size: 0.7em;
@@ -268,12 +268,13 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
   gap: 1rem;
   align-items: center;
 }
-.system-row {
+.system-col {
   display: flex;
-  gap: 1rem;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  justify-content: flex-start;
 }
-/* ---------- Test Panel (unified; replaces duplicated blocks) ---------- */
-#test-panel .config-item label{display:block;margin-bottom:12px}
 #test-panel .config-item label { padding-bottom: 15px; }
 #test-panel .config-item label+input[type=range]{display:block;margin-top:14px}
 #test-panel .config-item{margin-bottom:8px}
@@ -303,13 +304,20 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 
 
 /* ---------- Footer ---------- */
+/* ---------- Footer ---------- */
 .app-footer { margin-top: 2rem; padding: 0.75rem 0; text-align: center; opacity: 0.8; }
 
-
-/* ---------- Loading ---------- */
-.loading{opacity:.6;pointer-events:none;position:relative}
-.loading:after{content:'';position:absolute;top:50%;left:50%;width:20px;height:20px;margin:-10px 0 0 -10px;border:2px solid var(--border-light);border-top:2px solid var(--primary-blue);border-radius:50%;animation:spin 1s linear infinite}
-
+/* System & Maintenance two-column layout - fixed syntax */
+/* System & Maintenance two-column layout - reduced spacing */
+/* System & Maintenance two-column layout - always two columns, responsive */
+.system-controls-columns {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  column-gap: 0.7rem;
+  row-gap: 0.4rem;
+  width: 100%;
+  max-width: 100%;
+}
 /* ---------- Weather ---------- */
 .weather-forecast{display:flex;justify-content:center;gap:15px;margin-top:15px;flex-wrap:wrap}
 .forecast-day{background:linear-gradient(145deg,#fff,#f8f9fa);padding:12px;border-radius:8px;border:1px solid var(--border-light);min-width:80px;transition:transform .2s}
