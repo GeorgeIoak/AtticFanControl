@@ -215,6 +215,7 @@ void setup() {
   server.on("/clear_history", [](){ handleClearHistory(server); });
   server.on("/diagnostics", [](){ handleDiagnosticsDownload(server); });
   server.on("/update_wrapper", HTTP_GET, [](){ handleUpdateWrapper(server); });
+  server.on("/system_info", HTTP_GET, [](){ handleSystemInfo(server); });
   ElegantOTA.begin(&server, ota_user, ota_password);
 
   // --- Arduino IDE OTA Setup ---
