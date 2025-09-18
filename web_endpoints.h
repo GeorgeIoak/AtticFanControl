@@ -3,6 +3,7 @@
 #include <DNSServer.h>
 #include <LittleFS.h>
 // Web server endpoint handlers (inline for Arduino compatibility)
+#include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 #include <uri/UriBraces.h>
 #include <ArduinoJson.h>
@@ -29,6 +30,27 @@ extern ManualTimerState manualTimer;
 #define DIAGNOSTICS_LOG_PATH "/diagnostics.log"
 
 // Forward declarations
+inline void handleSystemInfo(ESP8266WebServer &server) {
+  StaticJsonDocument<512> doc;
+  doc["board"] = "ESP8266";
+  doc["firmware"] = FIRMWARE_VERSION;
+  FSInfo fsinfo;
+  if (LittleFS.info(fsinfo)) {
+    doc["fs_total"] = fsinfo.totalBytes;
+    doc["fs_used"] = fsinfo.usedBytes;
+    doc["fs_free"] = fsinfo.totalBytes - fsinfo.usedBytes;
+  } else {
+    doc["fs_total"] = nullptr;
+    doc["fs_used"] = nullptr;
+    doc["fs_free"] = nullptr;
+  }
+  doc["memory_free"] = ESP.getFreeHeap();
+  doc["uptime_ms"] = millis();
+  doc["ip"] = WiFi.localIP().toString();
+  String response;
+  serializeJson(doc, response);
+  server.send(200, "application/json", response);
+}
 void reinitMqtt();
 
 // Endpoint to download the CSV history log

@@ -170,7 +170,8 @@ const char EMBEDDED_WEBUI[] PROGMEM = R"EMB1(
   <h2>System & Maintenance <a href="help.html#api-reference" class="help-link" title="Click for help on system and API" aria-label="Help on system and API">(?)</a></h2>
       <div class="system-controls-grid">
         <div class="system-row">
-        <button onclick="window.location.href='/update_wrapper'" class="section-save-btn">Firmware Update</button>
+  <button onclick="window.location.href='/update_wrapper'" class="section-save-btn">Firmware Update</button>
+  <button onclick="openSystemInfoModal()" class="section-save-btn">System Info</button>
         </div>
         <div class="system-row">
         <a href="/diagnostics" class="section-save-btn" download>Download Diagnostics</a>
@@ -219,6 +220,17 @@ const char EMBEDDED_WEBUI[] PROGMEM = R"EMB1(
           <a href="/indoor_sensors_dashboard.html">Go to Indoor Sensors Dashboard &rarr;</a>
         </div>
     <div id="indoorSensorsList"></div>
+  </div>
+</div>
+
+<!-- System Info Modal -->
+<div id="systemInfoModal" class="modal">
+  <div class="modal-content">
+    <span class="close-btn" onclick="closeSystemInfoModal()">&times;</span>
+    <h3>System Information</h3>
+    <div id="systemInfoContent">
+      <!-- System info will be loaded here -->
+    </div>
   </div>
 </div>
 
