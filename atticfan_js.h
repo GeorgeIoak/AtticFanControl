@@ -9,6 +9,56 @@
 
 #undef F
 const char ATTICFAN_JS[] PROGMEM = R"EMB1(
+// --- System Info Modal Logic ---
+function openSystemInfoModal() {
+  // Show modal
+  document.getElementById('systemInfoModal').style.display = 'block';
+  // Load system info (mock for now)
+  loadSystemInfo();
+}
+
+function closeSystemInfoModal() {
+  document.getElementById('systemInfoModal').style.display = 'none';
+}
+
+function loadSystemInfo() {
+  fetch('/system_info')
+    .then(res => res.json())
+    .then(info => {
+      const fsInfo = info.fs_total !== null ? `${(info.fs_free/1024).toFixed(1)} KB free / ${(info.fs_total/1024).toFixed(1)} KB total` : '--';
+      const uptime = info.uptime_ms !== undefined ? formatUptime(info.uptime_ms) : '--';
+      const html = `
+        <div><strong>Board:</strong> ${info.board || '--'}</div>
+        <div><strong>Firmware:</strong> ${info.firmware || '--'}</div>
+        <div><strong>Filesystem:</strong> ${fsInfo}</div>
+        <div><strong>Memory Free:</strong> ${info.memory_free !== undefined ? info.memory_free + ' bytes' : '--'}</div>
+        <div><strong>Uptime:</strong> ${uptime}</div>
+        <div><strong>IP Address:</strong> ${info.ip || '--'}</div>
+      `;
+      document.getElementById('systemInfoContent').innerHTML = html;
+    })
+    .catch(() => {
+      document.getElementById('systemInfoContent').innerHTML = '<div class="error-message">Unable to load system info.</div>';
+    });
+}
+
+function formatUptime(ms) {
+  const sec = Math.floor(ms / 1000);
+  const days = Math.floor(sec / 86400);
+  const hours = Math.floor((sec % 86400) / 3600);
+  const minutes = Math.floor((sec % 3600) / 60);
+  const seconds = sec % 60;
+  let str = '';
+  if (days > 0) str += days + 'd ';
+  if (hours > 0 || days > 0) str += hours + 'h ';
+  if (minutes > 0 || hours > 0 || days > 0) str += minutes + 'm ';
+  str += seconds + 's';
+  return str.trim();
+}
+
+// Make modal functions global
+window.openSystemInfoModal = openSystemInfoModal;
+window.closeSystemInfoModal = closeSystemInfoModal;
 function renderForecast(container, forecast, isMock = false) {
   container.innerHTML = "";
   forecast.forEach((day, index) => {

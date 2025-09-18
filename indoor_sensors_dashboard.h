@@ -26,6 +26,7 @@ const char INDOOR_DASHBOARD_PAGE[] PROGMEM = R"EMB1(
         <section class="content-section">
             <div class="system-controls">
                 <button class="section-save-btn" onclick="loadSensorData()">🔄 Refresh</button>
+                <button class="section-save-btn" onclick="openSystemInfoModal()">🖥️ System Info</button>
             </div>
             
             <div class="sensor-grid" id="stats" style="margin-top: 20px;">
