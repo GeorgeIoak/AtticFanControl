@@ -21,16 +21,47 @@ struct DailyForecast {
   float tempMin;
   int weatherCode;
   int dayOfWeek; // 0=Sun, 1=Mon, ...
+  char sunrise[10]; // ISO time string, e.g., "06:30"
+  char sunset[10];  // ISO time string, e.g., "19:45"
+};
+
+// Structure for hourly forecast data
+struct HourlyForecast {
+  char timeString[20]; // ISO 8601 string, e.g., "2025-01-15T14:00"
+  float temperature;
+  int weatherCode;
 };
 
 // Global variables to store weather data
 CurrentWeather currentWeather = {0.0, 0, 0, false};
 DailyForecast forecast[3];
+HourlyForecast hourlyForecast[5]; // Store next 4-5 hours
 
 // Last update time
 // Initialize to 1 to prevent running on the very first loop before WiFi is up.
 unsigned long lastWeatherUpdate = 1;
 static bool initialWeatherFetchDone = false;
+
+/**
+ * @brief Extracts time (HH:MM) from ISO datetime string.
+ * @param isoDateTime ISO datetime string like "2025-01-15T06:30"
+ * @param timeOut Output buffer for time string (minimum 6 chars)
+ */
+void extractTimeFromISO(const char* isoDateTime, char* timeOut, size_t maxLen) {
+  if (!isoDateTime || !timeOut || maxLen < 6) {
+    if (timeOut && maxLen > 0) timeOut[0] = '\0';
+    return;
+  }
+  
+  const char* timeStart = strchr(isoDateTime, 'T');
+  if (timeStart && strlen(timeStart) >= 6) {
+    timeStart++; // Skip the 'T'
+    strncpy(timeOut, timeStart, 5); // Copy HH:MM
+    timeOut[5] = '\0';
+  } else {
+    timeOut[0] = '\0';
+  }
+}
 
 /**
  * @brief Calculates the day of the week from a date.
@@ -83,7 +114,7 @@ inline void updateWeatherData() {
   HTTPClient http;
   String url = "http://api.open-meteo.com/v1/forecast?latitude=" + String(WEATHER_LATITUDE) +
                "&longitude=" + String(WEATHER_LONGITUDE) +
-               "&current=temperature_2m,relativehumidity_2m,weathercode&daily=weathercode,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&windspeed_unit=mph&precipitation_unit=inch&forecast_days=3&timezone=auto";
+               "&current=temperature_2m,relativehumidity_2m,weathercode&daily=weathercode,temperature_2m_max,temperature_2m_min,sunrise,sunset&hourly=temperature_2m,weathercode&temperature_unit=fahrenheit&windspeed_unit=mph&precipitation_unit=inch&forecast_days=3&forecast_hours=5&timezone=auto";
 
   http.begin(client, url);
   #if DEBUG_SERIAL
@@ -93,7 +124,7 @@ inline void updateWeatherData() {
 
   if (httpCode == HTTP_CODE_OK) {
     String payload = http.getString();
-    StaticJsonDocument<1024> doc;
+    StaticJsonDocument<2048> doc; // Increased size to accommodate new data
     DeserializationError error = deserializeJson(doc, payload);
 
     if (error) {
@@ -115,12 +146,22 @@ inline void updateWeatherData() {
       strncpy(currentWeather.timeString, apiTime, sizeof(currentWeather.timeString) - 1);
       currentWeather.timeString[sizeof(currentWeather.timeString) - 1] = '\0';
 
-      // Parse 3-day forecast
+      // Parse 3-day forecast with sunrise/sunset
       JsonArray daily_time = doc["daily"]["time"];
+      JsonArray daily_sunrise = doc["daily"]["sunrise"];
+      JsonArray daily_sunset = doc["daily"]["sunset"];
+      
       for (int i = 0; i < daily_time.size() && i < 3; i++) {
         forecast[i].tempMax = doc["daily"]["temperature_2m_max"][i];
         forecast[i].tempMin = doc["daily"]["temperature_2m_min"][i];
         forecast[i].weatherCode = doc["daily"]["weathercode"][i];
+        
+        // Parse sunrise/sunset times
+        const char* sunriseStr = daily_sunrise[i] | "";
+        const char* sunsetStr = daily_sunset[i] | "";
+        extractTimeFromISO(sunriseStr, forecast[i].sunrise, sizeof(forecast[i].sunrise));
+        extractTimeFromISO(sunsetStr, forecast[i].sunset, sizeof(forecast[i].sunset));
+        
         const char* dateStr = daily_time[i];
         if (dateStr) {
           int year, month, day;
@@ -130,6 +171,22 @@ inline void updateWeatherData() {
           forecast[i].dayOfWeek = -1; // Invalid
         }
       }
+
+      // Parse hourly forecast (next 4-5 hours)
+      if (doc.containsKey("hourly")) {
+        JsonArray hourly_time = doc["hourly"]["time"];
+        JsonArray hourly_temp = doc["hourly"]["temperature_2m"];
+        JsonArray hourly_weathercode = doc["hourly"]["weathercode"];
+        
+        for (int i = 0; i < hourly_time.size() && i < 5; i++) {
+          const char* hourlyTimeStr = hourly_time[i] | "";
+          strncpy(hourlyForecast[i].timeString, hourlyTimeStr, sizeof(hourlyForecast[i].timeString) - 1);
+          hourlyForecast[i].timeString[sizeof(hourlyForecast[i].timeString) - 1] = '\0';
+          hourlyForecast[i].temperature = hourly_temp[i] | 0.0;
+          hourlyForecast[i].weatherCode = hourly_weathercode[i] | 0;
+        }
+      }
+      
       currentWeather.isValid = true;
 
       #if DEBUG_SERIAL
@@ -158,10 +215,28 @@ inline void updateWeatherData() {
 }
 
 inline void handleWeather(ESP8266WebServer &server) {
-  StaticJsonDocument<512> doc;
+  StaticJsonDocument<1024> doc; // Increased size for new data
   doc["currentTemp"] = serialized(String(currentWeather.temperature, 1));
   doc["currentHumidity"] = currentWeather.humidity;
   doc["currentIcon"] = weatherCodeToEmoji(currentWeather.weatherCode);
+  
+  // Add sunrise and sunset from today's forecast (first entry)
+  if (strlen(forecast[0].sunrise) > 0 && strlen(forecast[0].sunset) > 0) {
+    doc["sunrise"] = forecast[0].sunrise;
+    doc["sunset"] = forecast[0].sunset;
+  }
+  
+  // Add hourly forecast
+  JsonArray hourlyData = doc.createNestedArray("hourly");
+  for (int i = 0; i < 5; i++) {
+    if (strlen(hourlyForecast[i].timeString) > 0) {
+      JsonObject hour = hourlyData.createNestedObject();
+      hour["time"] = hourlyForecast[i].timeString;
+      hour["temperature"] = serialized(String(hourlyForecast[i].temperature, 1));
+      hour["icon"] = weatherCodeToEmoji(hourlyForecast[i].weatherCode);
+    }
+  }
+  
   JsonArray forecastData = doc.createNestedArray("forecast");
   for (int i = 0; i < 3; i++) {
     JsonObject day = forecastData.createNestedObject();
