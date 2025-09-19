@@ -189,6 +189,17 @@ input:checked+.slider:before{transform:translateX(26px)}
 .section-save-btn.btn-danger{background:linear-gradient(135deg,var(--danger-red),#c82333);box-shadow:0 4px 15px rgba(220,53,69,.3)}
 .section-save-btn.btn-danger:hover{background:linear-gradient(135deg,#c82333,#bd2130);box-shadow:0 6px 20px rgba(220,53,69,.4)}
 
+/* Responsive button sizing for mobile */
+@media (max-width: 600px) {
+  .system-controls-columns .section-save-btn,
+  .system-controls-columns button {
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 1rem;
+  }
+}
 .mode-buttons-container{display:flex;justify-content:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
 .fan-status-container{display:flex;justify-content:center;align-items:center;gap:20px;margin:15px 0;flex-wrap:wrap}
 .fan-text-container{text-align:left}
