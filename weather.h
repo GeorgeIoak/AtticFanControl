@@ -5,6 +5,7 @@
 #include <ESP8266HTTPClient.h>
 #include <ArduinoJson.h>
 #include "hardware.h"
+#include "secrets.h"
 
 // Structure to hold current weather conditions
 struct CurrentWeather {
