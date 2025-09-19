@@ -986,18 +986,26 @@ function renderHourlyForecast(hourlyData) {
   
   hourlyContainer.innerHTML = "";
 
-  // Find the next 5 hours from current time
-  const now = new Date();
-  const startIdx = now.getHours();
   if (
     hourlyData &&
     Array.isArray(hourlyData.time) &&
     Array.isArray(hourlyData.temperature_2m) &&
     Array.isArray(hourlyData.weathercode)
   ) {
-    const times = hourlyData.time.slice(startIdx, startIdx + 5);
-    const temps = hourlyData.temperature_2m.slice(startIdx, startIdx + 5);
-    const codes = hourlyData.weathercode.slice(startIdx, startIdx + 5);
+    let times = hourlyData.time;
+    let temps = hourlyData.temperature_2m;
+    let codes = hourlyData.weathercode;
+
+    // The device provides a pre-filtered 5-hour forecast. Localhost gets the full 72-hour forecast.
+    // Only slice the data if the array is long (i.e., we are in local development).
+    if (times.length > 5) {
+      const now = new Date();
+      const startIdx = now.getHours();
+      times = times.slice(startIdx, startIdx + 5);
+      temps = temps.slice(startIdx, startIdx + 5);
+      codes = codes.slice(startIdx, startIdx + 5);
+    }
+    
     console.log('[HourlyForecast] times:', times);
     console.log('[HourlyForecast] temps:', temps);
     console.log('[HourlyForecast] codes:', codes);
@@ -1041,8 +1049,7 @@ static void handleAtticfanJs() {
   extern ESP8266WebServer server;                                              
   server.sendHeader("Connection", "close");                                   
   server.send_P(200, "application/javascript",                                               
-                ATTICFAN_JS,
-                sizeof(ATTICFAN_JS) - 1);
+                ATTICFAN_JS, ATTICFAN_JS_LEN);
 }
 #endif
 

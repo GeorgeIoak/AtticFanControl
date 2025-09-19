@@ -238,8 +238,7 @@ static void handleIndoorDashboardPage() {
   extern ESP8266WebServer server;                                              
   server.sendHeader("Connection", "close");                                   
   server.send_P(200, "text/html",                                               
-                INDOOR_DASHBOARD_PAGE,
-                sizeof(INDOOR_DASHBOARD_PAGE) - 1);
+                INDOOR_DASHBOARD_PAGE, INDOOR_DASHBOARD_PAGE_LEN);
 }
 #endif
 

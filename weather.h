@@ -178,13 +178,29 @@ inline void updateWeatherData() {
         JsonArray hourly_time = doc["hourly"]["time"];
         JsonArray hourly_temp = doc["hourly"]["temperature_2m"];
         JsonArray hourly_weathercode = doc["hourly"]["weathercode"];
-        
-        for (int i = 0; i < hourly_time.size() && i < 5; i++) {
+
+        // Find the current hour's index to get the *next* 5 hours
+        int startIdx = 0;
+        time_t now;
+        time(&now);
+        struct tm* timeinfo = localtime(&now);
+        if (timeinfo && timeinfo->tm_year > 70) { // Check if time is synced
+          startIdx = timeinfo->tm_hour;
+        }
+
+        // Clear old forecast data
+        for (int i = 0; i < 5; i++) {
+          hourlyForecast[i].timeString[0] = '\0';
+        }
+
+        int forecastCount = 0;
+        for (int i = startIdx; i < hourly_time.size() && forecastCount < 5; i++) {
           const char* hourlyTimeStr = hourly_time[i] | "";
-          strncpy(hourlyForecast[i].timeString, hourlyTimeStr, sizeof(hourlyForecast[i].timeString) - 1);
-          hourlyForecast[i].timeString[sizeof(hourlyForecast[i].timeString) - 1] = '\0';
-          hourlyForecast[i].temperature = hourly_temp[i] | 0.0;
-          hourlyForecast[i].weatherCode = hourly_weathercode[i] | 0;
+          strncpy(hourlyForecast[forecastCount].timeString, hourlyTimeStr, sizeof(hourlyForecast[forecastCount].timeString) - 1);
+          hourlyForecast[forecastCount].timeString[sizeof(hourlyForecast[forecastCount].timeString) - 1] = '\0';
+          hourlyForecast[forecastCount].temperature = hourly_temp[i] | 0.0;
+          hourlyForecast[forecastCount].weatherCode = hourly_weathercode[i] | 0;
+          forecastCount++;
         }
       }
       
@@ -227,14 +243,16 @@ inline void handleWeather(ESP8266WebServer &server) {
     doc["sunset"] = forecast[0].sunset;
   }
   
-  // Add hourly forecast
-  JsonArray hourlyData = doc.createNestedArray("hourly");
+  // Add hourly forecast in Open-Meteo format
+  JsonObject hourlyObj = doc.createNestedObject("hourly");
+  JsonArray timeArr = hourlyObj.createNestedArray("time");
+  JsonArray tempArr = hourlyObj.createNestedArray("temperature_2m");
+  JsonArray codeArr = hourlyObj.createNestedArray("weathercode");
   for (int i = 0; i < 5; i++) {
     if (strlen(hourlyForecast[i].timeString) > 0) {
-      JsonObject hour = hourlyData.createNestedObject();
-      hour["time"] = hourlyForecast[i].timeString;
-      hour["temperature"] = serialized(String(hourlyForecast[i].temperature, 1));
-      hour["icon"] = weatherCodeToEmoji(hourlyForecast[i].weatherCode);
+      timeArr.add(hourlyForecast[i].timeString);
+      tempArr.add(hourlyForecast[i].temperature);
+      codeArr.add(hourlyForecast[i].weatherCode);
     }
   }
   

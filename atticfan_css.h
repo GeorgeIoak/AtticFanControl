@@ -293,8 +293,8 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 .system-col {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 2rem;
+  align-items: stretch; /* Changed from center to stretch */
+  gap: 1rem; /* Reduced from 2rem */
   justify-content: flex-start;
 }
 #test-panel .config-item label { padding-bottom: 15px; }
@@ -342,8 +342,17 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 }
 /* ---------- Weather ---------- */
 .weather-forecast{display:flex;justify-content:center;gap:15px;margin-top:15px;flex-wrap:wrap}
-.forecast-day{background:linear-gradient(145deg,#fff,#f8f9fa);padding:12px;border-radius:8px;border:1px solid var(--border-light);min-width:80px;transition:transform .2s}
-.forecast-day:hover{transform:translateY(-2px)}
+.forecast-day {
+  /* Removed card styles to match hourly forecast */
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: center;
+  min-width: 70px;
+  padding: 0 10px;
+}
+.forecast-day .emoji { font-size: 1.4rem; }
+.forecast-day div:first-child { font-size: 0.9rem; font-weight: 500; color: #666; }
 
 /* Weather header with sunrise/sunset */
 .weather-header-row{display:flex;justify-content:space-between;align-items:center;margin-top:10px;margin-bottom:15px;padding:0 10px}
@@ -359,7 +368,16 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 
 /* Hourly forecast */
 .hourly-forecast{display:flex;gap:12px;margin-top:15px;margin-bottom:20px;padding:10px 0;justify-content:center}
-.hourly-item{background:linear-gradient(145deg,#f8f9fa,#fff);padding:10px;border-radius:6px;border:1px solid var(--border-light);min-width:70px;text-align:center;flex-shrink:0}
+.hourly-item{
+  /* Removed card styles like background, border, and padding */
+  padding: 0 5px; /* Add horizontal padding only */
+  min-width: 55px; /* A smaller min-width */
+  text-align:center;
+  flex-shrink:0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px; /* Add a small gap between time/icon/temp */
+}
 .hourly-time{font-size:0.8rem;font-weight:500;margin-bottom:4px;color:#666}
 .hourly-icon{font-size:1.2rem;margin-bottom:4px}
 .hourly-temp{font-size:0.85rem;font-weight:600}
@@ -368,7 +386,12 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 @media (max-width:900px){#historyChart{height:200px!important}}
 @media (max-width:800px){.top-layout-grid{grid-template-columns:1fr}.fan-status-container{flex-direction:column;gap:15px}.settings-container{grid-template-columns:1fr}}
 @media (max-width:680px){#test-panel .config-grid{grid-template-columns:1fr;row-gap:24px}#test-panel .config-item{margin-bottom:16px}}
-@media (max-width:480px){.section-save-btn{padding:10px 16px;font-size:.9rem}h1{font-size:1.5rem}}
+@media (max-width:480px){
+  .section-save-btn{padding:10px 16px;font-size:.9rem}
+  h1{font-size:1.5rem}
+  .hourly-forecast{gap: 8px;} /* Reduce gap on small screens */
+  .hourly-item{min-width: 50px;}
+}
 
 :root { --radius-lg:16px; --radius-md:12px }
 
@@ -391,9 +414,6 @@ h1{letter-spacing:.5px}
 }
 .section-save-btn:disabled{opacity:.5}
 
-.weather-forecast{gap:18px}
-.forecast-day{min-width:110px;text-align:center;padding:14px 16px}
-.forecast-day .temp-range{font-weight:600}
 
 a{color:#1976D2}
 .content-section h2 a{color:inherit}
@@ -645,8 +665,7 @@ static void handleAtticfanCss() {
   extern ESP8266WebServer server;                                              
   server.sendHeader("Connection", "close");                                   
   server.send_P(200, "text/css",                                               
-                ATTICFAN_CSS,
-                sizeof(ATTICFAN_CSS) - 1);
+                ATTICFAN_CSS, ATTICFAN_CSS_LEN);
 }
 #endif
 

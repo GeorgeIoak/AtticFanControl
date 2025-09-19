@@ -36,8 +36,7 @@ static void {func_name}() {{
   extern ESP8266WebServer server;                                              
   server.sendHeader("Connection", "close");                                   
   server.send_P(200, "{content_type}",                                               
-                {var_name},
-                sizeof({var_name}) - 1);
+                {var_name}, {var_name}_LEN);
 }}
 #endif
 """

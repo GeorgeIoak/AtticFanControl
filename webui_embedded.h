@@ -172,7 +172,7 @@ const char EMBEDDED_WEBUI[] PROGMEM = R"EMB1(
       <div class="system-col">
         <button onclick="window.location.href='/update_wrapper'" class="section-save-btn">Firmware Update</button>
         <a href="/diagnostics" class="section-save-btn" download>Download Diagnostics</a>
-        <a href="/history.csv" class="section-save-btn" download>Download History (CSV)</a>
+        <a href="/history.csv" class="section-save-btn" download>Download History</a>
         <button onclick="restartDevice()" class="section-save-btn btn-danger">Restart Device</button>
       </div>
       <div class="system-col">
@@ -246,8 +246,7 @@ static void handleEmbeddedWebUI() {
   extern ESP8266WebServer server;                                              
   server.sendHeader("Connection", "close");                                   
   server.send_P(200, "text/html",                                               
-                EMBEDDED_WEBUI,
-                sizeof(EMBEDDED_WEBUI) - 1);
+                EMBEDDED_WEBUI, EMBEDDED_WEBUI_LEN);
 }
 #endif
 

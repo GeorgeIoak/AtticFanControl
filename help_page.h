@@ -163,8 +163,7 @@ static void handleHelpPage() {
   extern ESP8266WebServer server;                                              
   server.sendHeader("Connection", "close");                                   
   server.send_P(200, "text/html",                                               
-                HELP_PAGE,
-                sizeof(HELP_PAGE) - 1);
+                HELP_PAGE, HELP_PAGE_LEN);
 }
 #endif
 
