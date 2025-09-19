@@ -323,6 +323,25 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 .forecast-day{background:linear-gradient(145deg,#fff,#f8f9fa);padding:12px;border-radius:8px;border:1px solid var(--border-light);min-width:80px;transition:transform .2s}
 .forecast-day:hover{transform:translateY(-2px)}
 
+/* Weather header with sunrise/sunset */
+.weather-header-row{display:flex;justify-content:space-between;align-items:center;margin-top:10px;margin-bottom:15px;padding:0 10px}
+.sunrise-sunset{font-size:0.9rem;font-weight:500;color:#666}
+
+.weather-header-title {
+  flex: 1;
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+/* Hourly forecast */
+.hourly-forecast{display:flex;gap:12px;margin-top:15px;margin-bottom:20px;padding:10px 0;justify-content:center}
+.hourly-item{background:linear-gradient(145deg,#f8f9fa,#fff);padding:10px;border-radius:6px;border:1px solid var(--border-light);min-width:70px;text-align:center;flex-shrink:0}
+.hourly-time{font-size:0.8rem;font-weight:500;margin-bottom:4px;color:#666}
+.hourly-icon{font-size:1.2rem;margin-bottom:4px}
+.hourly-temp{font-size:0.85rem;font-weight:600}
+
 /* ---------- Responsive ---------- */
 @media (max-width:900px){#historyChart{height:200px!important}}
 @media (max-width:800px){.top-layout-grid{grid-template-columns:1fr}.fan-status-container{flex-direction:column;gap:15px}.settings-container{grid-template-columns:1fr}}

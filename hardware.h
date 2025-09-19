@@ -56,4 +56,4 @@
 
 // === Debugging ===
 #define DEBUG_SERIAL      true
-#define FIRMWARE_VERSION  "0.102"
+#define FIRMWARE_VERSION  "0.103"
