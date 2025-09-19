@@ -467,15 +467,17 @@ function updateWeatherData() {
         
         // Mock hourly forecast
         const now = new Date();
-        const mockHourlyData = [];
+        const mockHourlyData = {
+          time: [],
+          temperature_2m: [],
+          weathercode: []
+        };
         for (let i = 0; i < 5; i++) {
           const hour = new Date(now.getTime() + i * 60 * 60 * 1000);
           const timeStr = hour.toISOString().substring(0, 16);
-          mockHourlyData.push({
-            time: timeStr,
-            temperature: 75 + Math.random() * 10,
-            weatherCode: [0, 1, 1, 80, 61][i]
-          });
+          mockHourlyData.time.push(timeStr);
+          mockHourlyData.temperature_2m.push(75 + Math.random() * 10);
+          mockHourlyData.weathercode.push([0, 1, 1, 80, 61][i]);
         }
         renderHourlyForecast(mockHourlyData);
       }
