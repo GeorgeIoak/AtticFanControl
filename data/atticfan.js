@@ -445,13 +445,8 @@ function updateWeatherData() {
         renderForecast(forecastContainer, forecast);
         
         // Render hourly forecast
-        if (data.hourly && data.hourly.time) {
-          const hourlyData = data.hourly.time.slice(0, 5).map((time, index) => ({
-            time: time,
-            temperature: data.hourly.temperature_2m[index],
-            weatherCode: data.hourly.weathercode[index]
-          }));
-          renderHourlyForecast(hourlyData);
+        if (data.hourly && Array.isArray(data.hourly.time)) {
+          renderHourlyForecast(data.hourly);
         }
       } catch (err) {
   debugWarn('[AtticFan] Open-Meteo fetch failed, using mock weather data:', err);
@@ -924,25 +919,33 @@ function updateSunriseSunset(sunrise, sunset) {
   const sunriseTime = sunrise.includes('T') ? sunrise.split('T')[1].substring(0, 5) : sunrise;
   const sunsetTime = sunset.includes('T') ? sunset.split('T')[1].substring(0, 5) : sunset;
   
-  // Find or create sunrise/sunset elements in the weather section
-  let sunriseEl = document.getElementById('sunriseTime');
-  let sunsetEl = document.getElementById('sunsetTime');
-  
-  if (!sunriseEl || !sunsetEl) {
-    // Create the sunrise/sunset header if it doesn't exist
-    const weatherSection = document.querySelector('section .content-section h2');
-    if (weatherSection && weatherSection.textContent.includes('Weather Forecast')) {
-      const headerRow = document.createElement('div');
+  // Find the weather section
+  const weatherSection = document.querySelector('.content-section');
+  if (weatherSection) {
+    let headerRow = weatherSection.querySelector('.weather-header-row');
+    if (!headerRow) {
+      // Remove existing h2 if present
+      const oldHeader = weatherSection.querySelector('h2');
+      let headerText = 'Weather Forecast';
+      if (oldHeader) {
+        headerText = oldHeader.textContent.replace(/🌅.*🌇.*/, '').trim();
+        oldHeader.remove();
+      }
+      headerRow = document.createElement('div');
       headerRow.className = 'weather-header-row';
       headerRow.innerHTML = `
-        <span class="sunrise-sunset"><span id="sunriseTime">🌅 ${sunriseTime}</span></span>
-        <span class="sunrise-sunset"><span id="sunsetTime">🌇 ${sunsetTime}</span></span>
+        <span class="sunrise-sunset" id="sunriseTime">🌅 ${sunriseTime}</span>
+        <span class="weather-header-title">${headerText}</span>
+        <span class="sunrise-sunset" id="sunsetTime">🌇 ${sunsetTime}</span>
       `;
-      weatherSection.parentNode.insertBefore(headerRow, weatherSection.nextSibling);
+      weatherSection.insertBefore(headerRow, weatherSection.firstChild);
+    } else {
+      // Update times only
+      const sunriseEl = headerRow.querySelector('#sunriseTime');
+      const sunsetEl = headerRow.querySelector('#sunsetTime');
+      if (sunriseEl) sunriseEl.textContent = `🌅 ${sunriseTime}`;
+      if (sunsetEl) sunsetEl.textContent = `🌇 ${sunsetTime}`;
     }
-  } else {
-    sunriseEl.textContent = `🌅 ${sunriseTime}`;
-    sunsetEl.textContent = `🌇 ${sunsetTime}`;
   }
 }
 
@@ -969,28 +972,47 @@ function renderHourlyForecast(hourlyData) {
   }
   
   hourlyContainer.innerHTML = "";
-  
-  hourlyData.forEach(hour => {
-    const hourDiv = document.createElement("div");
-    hourDiv.className = "hourly-item";
-    
-    // Extract hour from time string (e.g., "14:00" from "2025-01-15T14:00")
-    let displayTime = hour.time;
-    if (hour.time.includes('T')) {
-      displayTime = hour.time.split('T')[1].substring(0, 5);
+
+  // Find the next 5 hours from current time
+  const now = new Date();
+  const startIdx = now.getHours();
+  if (
+    hourlyData &&
+    Array.isArray(hourlyData.time) &&
+    Array.isArray(hourlyData.temperature_2m) &&
+    Array.isArray(hourlyData.weathercode)
+  ) {
+    const times = hourlyData.time.slice(startIdx, startIdx + 5);
+    const temps = hourlyData.temperature_2m.slice(startIdx, startIdx + 5);
+    const codes = hourlyData.weathercode.slice(startIdx, startIdx + 5);
+    console.log('[HourlyForecast] times:', times);
+    console.log('[HourlyForecast] temps:', temps);
+    console.log('[HourlyForecast] codes:', codes);
+    for (let i = 0; i < times.length; i++) {
+      const hourDiv = document.createElement("div");
+      hourDiv.className = "hourly-item";
+      let displayTime = times[i];
+      if (displayTime.includes('T')) {
+        // Extract hour from 'YYYY-MM-DDTHH:MM'
+        let hourStr = displayTime.split('T')[1].substring(0, 2);
+        let hour = parseInt(hourStr, 10);
+        let ampm = hour >= 12 ? 'PM' : 'AM';
+        let hour12 = hour % 12;
+        if (hour12 === 0) hour12 = 12;
+        displayTime = `${hour12} ${ampm}`;
+      }
+      const icon = weatherCodeToEmoji(codes[i]);
+      const temp = typeof temps[i] === 'number' ? Math.round(temps[i]) : temps[i];
+      hourDiv.innerHTML = `
+        <div class="hourly-time">${displayTime}</div>
+        <div class="hourly-icon">${icon}</div>
+        <div class="hourly-temp">${temp}°</div>
+      `;
+      hourlyContainer.appendChild(hourDiv);
     }
-    
-    const icon = hour.icon || weatherCodeToEmoji(hour.weatherCode);
-    const temp = typeof hour.temperature === 'number' ? Math.round(hour.temperature) : hour.temperature;
-    
-    hourDiv.innerHTML = `
-      <div class="hourly-time">${displayTime}</div>
-      <div class="hourly-icon">${icon}</div>
-      <div class="hourly-temp">${temp}°</div>
-    `;
-    
-    hourlyContainer.appendChild(hourDiv);
-  });
+  } else {
+    console.error('[HourlyForecast] Invalid hourlyData format:', hourlyData);
+  }
 }
 
 // Ensure main app logic runs after DOM is ready
