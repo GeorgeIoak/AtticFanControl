@@ -37,8 +37,7 @@
 
 // === Weather Forecast ===
 #define WEATHER_UPDATE_INTERVAL_MS 1800000 // How often to fetch weather (30 minutes)
-#define WEATHER_LATITUDE      38.72   // Latitude for weather forecast
-#define WEATHER_LONGITUDE     -121.36 // Longitude for weather forecast
+// long and lat moved to secrets.h
 
 // === WiFi Connection ===
 #define WIFI_INITIAL_RETRY_DELAY_MS  30000  // First retry delay (ms)
@@ -56,4 +55,4 @@
 
 // === Debugging ===
 #define DEBUG_SERIAL      true
-#define FIRMWARE_VERSION  "0.103"
+#define FIRMWARE_VERSION  "0.104"
