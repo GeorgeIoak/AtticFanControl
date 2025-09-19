@@ -431,7 +431,7 @@ function updateWeatherData() {
   if (isLocalDev) {
     const lat = 38.72;
     const lon = -121.36;
-    const url = `http://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relativehumidity_2m,weathercode&daily=weathercode,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&windspeed_unit=mph&precipitation_unit=inch&forecast_days=3&timezone=auto`;
+    const url = `http://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relativehumidity_2m,weathercode&daily=weathercode,temperature_2m_max,temperature_2m_min,sunrise,sunset&hourly=temperature_2m,weathercode&temperature_unit=fahrenheit&windspeed_unit=mph&precipitation_unit=inch&forecast_days=3&timezone=auto`;
   debugLog('[AtticFan] Fetching weather from Open-Meteo:', url);
     (async () => {
       try {
@@ -442,6 +442,10 @@ function updateWeatherData() {
         iconEl.textContent = weatherCodeToEmoji(data.current.weathercode);
         tempEl.textContent = data.current.temperature_2m.toFixed(1);
         humidityEl.textContent = data.current.relativehumidity_2m;
+        
+        // Update sunrise/sunset display
+        updateSunriseSunset(data.daily.sunrise[0], data.daily.sunset[0]);
+        
         // Build forecast array for rendering
         const forecast = data.daily.time.map((time, index) => ({
           dayOfWeek: new Date(time).getUTCDay(),
@@ -450,18 +454,41 @@ function updateWeatherData() {
           min: Math.round(data.daily.temperature_2m_min[index])
         }));
         renderForecast(forecastContainer, forecast);
+        
+        // Render hourly forecast
+        if (data.hourly && Array.isArray(data.hourly.time)) {
+          renderHourlyForecast(data.hourly);
+        }
       } catch (err) {
   debugWarn('[AtticFan] Open-Meteo fetch failed, using mock weather data:', err);
         forecastContainer.innerHTML = "";
         iconEl.textContent = "☀️";
         tempEl.textContent = "75";
         humidityEl.textContent = "55";
+        
+        // Mock sunrise/sunset
+        updateSunriseSunset("06:30", "19:45");
+        
         const mockForecast = [
           { dayOfWeek: new Date().getUTCDay(), icon: '☀️', max: '85', min: '65' },
           { dayOfWeek: (new Date().getUTCDay() + 1) % 7, icon: '⛅', max: '82', min: '63' },
           { dayOfWeek: (new Date().getUTCDay() + 2) % 7, icon: '🌦️', max: '78', min: '60' }
         ];
         renderForecast(forecastContainer, mockForecast, true);
+        
+        // Mock hourly forecast
+        const now = new Date();
+        const mockHourlyData = [];
+        for (let i = 0; i < 5; i++) {
+          const hour = new Date(now.getTime() + i * 60 * 60 * 1000);
+          const timeStr = hour.toISOString().substring(0, 16);
+          mockHourlyData.push({
+            time: timeStr,
+            temperature: 75 + Math.random() * 10,
+            weatherCode: [0, 1, 1, 80, 61][i]
+          });
+        }
+        renderHourlyForecast(mockHourlyData);
       }
     })();
     return;
@@ -476,7 +503,24 @@ function updateWeatherData() {
       iconEl.textContent = data.currentIcon;
       tempEl.textContent = data.currentTemp;
       humidityEl.textContent = data.currentHumidity;
+      
+      // Update sunrise/sunset if available
+      if (data.sunrise && data.sunset) {
+        updateSunriseSunset(data.sunrise, data.sunset);
+      } else {
+        // Clear any existing sunrise/sunset display if data isn't available
+        const sunriseEl = document.getElementById('sunriseTime');
+        const sunsetEl = document.getElementById('sunsetTime');
+        if (sunriseEl) sunriseEl.textContent = '🌅 --:--';
+        if (sunsetEl) sunsetEl.textContent = '🌇 --:--';
+      }
+      
       renderForecast(forecastContainer, data.forecast);
+      
+      // Render hourly forecast if available
+      if (data.hourly) {
+        renderHourlyForecast(data.hourly);
+      }
     } catch (err) {
   debugError('[AtticFan] Failed to fetch /weather:', err);
     }
@@ -877,6 +921,110 @@ document.addEventListener('DOMContentLoaded', function(){
   if (att) document.getElementById('attic-temp-val').textContent = att.value;
   if (out) document.getElementById('outdoor-temp-val').textContent = out.value;
 });
+
+/**
+ * Updates sunrise and sunset display in the weather section header
+ */
+function updateSunriseSunset(sunrise, sunset) {
+  // Extract time from ISO datetime if needed
+  const sunriseTime = sunrise.includes('T') ? sunrise.split('T')[1].substring(0, 5) : sunrise;
+  const sunsetTime = sunset.includes('T') ? sunset.split('T')[1].substring(0, 5) : sunset;
+  
+  // Find the weather section
+  const weatherSection = document.querySelector('.content-section');
+  if (weatherSection) {
+    let headerRow = weatherSection.querySelector('.weather-header-row');
+    if (!headerRow) {
+      // Remove existing h2 if present
+      const oldHeader = weatherSection.querySelector('h2');
+      let headerText = 'Weather Forecast';
+      if (oldHeader) {
+        headerText = oldHeader.textContent.replace(/🌅.*🌇.*/, '').trim();
+        oldHeader.remove();
+      }
+      headerRow = document.createElement('div');
+      headerRow.className = 'weather-header-row';
+      headerRow.innerHTML = `
+        <span class="sunrise-sunset" id="sunriseTime">🌅 ${sunriseTime}</span>
+        <span class="weather-header-title">${headerText}</span>
+        <span class="sunrise-sunset" id="sunsetTime">🌇 ${sunsetTime}</span>
+      `;
+      weatherSection.insertBefore(headerRow, weatherSection.firstChild);
+    } else {
+      // Update times only
+      const sunriseEl = headerRow.querySelector('#sunriseTime');
+      const sunsetEl = headerRow.querySelector('#sunsetTime');
+      if (sunriseEl) sunriseEl.textContent = `🌅 ${sunriseTime}`;
+      if (sunsetEl) sunsetEl.textContent = `🌇 ${sunsetTime}`;
+    }
+  }
+}
+
+/**
+ * Renders hourly forecast for the next 4-5 hours
+ */
+function renderHourlyForecast(hourlyData) {
+  let hourlyContainer = document.getElementById('hourlyForecastContainer');
+  
+  if (!hourlyContainer) {
+    // Create hourly forecast container
+    const weatherSection = document.querySelector('#forecastContainer').parentNode;
+    hourlyContainer = document.createElement('div');
+    hourlyContainer.id = 'hourlyForecastContainer';
+    hourlyContainer.className = 'hourly-forecast';
+    
+    const title = document.createElement('h4');
+    title.textContent = 'Hourly Forecast';
+    title.style.marginTop = '1rem';
+    title.style.marginBottom = '0.5rem';
+    
+    weatherSection.insertBefore(title, weatherSection.querySelector('#forecastContainer'));
+    weatherSection.insertBefore(hourlyContainer, weatherSection.querySelector('#forecastContainer'));
+  }
+  
+  hourlyContainer.innerHTML = "";
+
+  // Find the next 5 hours from current time
+  const now = new Date();
+  const startIdx = now.getHours();
+  if (
+    hourlyData &&
+    Array.isArray(hourlyData.time) &&
+    Array.isArray(hourlyData.temperature_2m) &&
+    Array.isArray(hourlyData.weathercode)
+  ) {
+    const times = hourlyData.time.slice(startIdx, startIdx + 5);
+    const temps = hourlyData.temperature_2m.slice(startIdx, startIdx + 5);
+    const codes = hourlyData.weathercode.slice(startIdx, startIdx + 5);
+    console.log('[HourlyForecast] times:', times);
+    console.log('[HourlyForecast] temps:', temps);
+    console.log('[HourlyForecast] codes:', codes);
+    for (let i = 0; i < times.length; i++) {
+      const hourDiv = document.createElement("div");
+      hourDiv.className = "hourly-item";
+      let displayTime = times[i];
+      if (displayTime.includes('T')) {
+        // Extract hour from 'YYYY-MM-DDTHH:MM'
+        let hourStr = displayTime.split('T')[1].substring(0, 2);
+        let hour = parseInt(hourStr, 10);
+        let ampm = hour >= 12 ? 'PM' : 'AM';
+        let hour12 = hour % 12;
+        if (hour12 === 0) hour12 = 12;
+        displayTime = `${hour12} ${ampm}`;
+      }
+      const icon = weatherCodeToEmoji(codes[i]);
+      const temp = typeof temps[i] === 'number' ? Math.round(temps[i]) : temps[i];
+      hourDiv.innerHTML = `
+        <div class="hourly-time">${displayTime}</div>
+        <div class="hourly-icon">${icon}</div>
+        <div class="hourly-temp">${temp}°</div>
+      `;
+      hourlyContainer.appendChild(hourDiv);
+    }
+  } else {
+    console.error('[HourlyForecast] Invalid hourlyData format:', hourlyData);
+  }
+}
 
 // Ensure main app logic runs after DOM is ready
 document.addEventListener('DOMContentLoaded', initializeApp);)EMB1";
